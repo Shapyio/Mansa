@@ -39,27 +39,27 @@ cmake --build build
 
 #### 🧠 Epic: Environment & Tooling Setup
 
-- Dev container setup with Docker & VSCode
-- GitHub Actions for CI
-- Cross-platform CMake build
+- [x] Dev container setup with Docker & VSCode
+- [ ] GitHub Actions for CI
+- [ ] Cross-platform CMake build
 
 #### 📊 Epic: Data Collection System
 
-- Financial API integration (e.g., AlphaVantage, Yahoo Finance)
-- Sentiment scraping (Reddit, news, Twitter)
-- Data pre-processing and cleanup
+- [ ] Financial API integration (e.g., AlphaVantage, Yahoo Finance)
+- [ ] Sentiment scraping (Reddit, news, Twitter)
+- [ ] Data pre-processing and cleanup
 
 #### 🧠 Epic: Prediction Engine
 
-- Implement core logic (indicators, thresholds)
-- Trainable ML model support (regression/classification)
-- Evaluate and test predictions
+- [ ] Implement core logic (indicators, thresholds)
+- [ ] Trainable ML model support (regression/classification)
+- [ ] Evaluate and test predictions
 
 #### 💻 Epic: Interface & Visualization
 
-- Simple CLI or web UI to view predictions
-- Plot historical vs predicted trends
-- JSON API to fetch results
+- [ ] Simple CLI or web UI to view predictions
+- [ ] Plot historical vs predicted trends
+- [ ] JSON API to fetch results
 
 ---
 
@@ -136,6 +136,6 @@ docker-compose up --build
 
 Add your own thoughts here:
 
-- [ ] Research models for stock prediction, sentiment analysis, as well as more niche trackers (weather, patterns, etc)
-- [ ] Explore integration with API for headlines and articles
-- [ ] Keep notebook with ML experiment results
+- Research models for stock prediction, sentiment analysis, as well as more niche trackers (weather, patterns, etc)
+- Explore integration with API for headlines and articles
+- Keep notebook with ML experiment results
