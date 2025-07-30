@@ -1,0 +1,105 @@
+++ / CMake ===
+build/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+compile_commands.json
++!CMakeLists.txt	# Keep Cmake lists
+
+# Object and executable files
+*.o
+*.obj
+*.so
+*.a
+*.dll
+*.exe
+*.out
+*.log
+
+# === General ===
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
+# === Docker ===
+*.container
+*.tar
+.env
++!Dockerfile		# Keep Dockerfile
++!docker-compose.yml
+
+# === Python scripts for preprocessing ===
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.ipynb_checkpoints
+
+# === Data files ===
+data/raw/
+data/processed/
+*.csv
+*.tsv
+*.json
+*.parquet
+*.xlsx
+
+# === Logs, reports, and outputs ===
+logs/
+*.log
+*.tmp
+*.bak
+*.cache
+
+# === Package Managers (optional if using) ===
+# vcpkg
+vcpkg_installed/
+installed/
+
+# conan
+conan.lock
+conanbuildinfo.*
+conaninfo.*
+
+# === Docs and Build Tools ===
+docs/html/      # Doxygen output
+*.pdf
+*.aux
+*.toc
+*.lof
+*.lot
+*.gz
+
+# === CI/CD Secrets ===
+secrets.env
+credentials.json
+
+# === VSCode ===
+.vscode/
+*.code-workspace
+
+# === Visual Studio ===
+*.user
+*.suo
+*.VC.db
+*.VC.opendb
+*.pdb
+*.ipch
+*.obj
+*.idb
+*.log
+*.tlog
+*.lastbuildstate
+*.exe
+*.dll
+*.appx
+*.appxsym
+*.cache
+*.opensdf
+*.sdf
+
+# VS-related build folders
+[Bb]in/
+[Oo]bj/
