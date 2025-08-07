@@ -29,6 +29,7 @@ Thumbs.db
 .env
 +!Dockerfile		# Keep Dockerfile
 +!docker-compose.yml
++!devcontainer.json
 
 # === Python scripts for preprocessing ===
 __pycache__/
@@ -79,6 +80,8 @@ credentials.json
 # === VSCode ===
 .vscode/
 *.code-workspace
++!launch.json
++!settings.json
 
 # === Visual Studio ===
 *.user
