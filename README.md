@@ -134,7 +134,7 @@ docker-compose up --build
 
 ## ✍️ Personal Notes
 
-Add your own thoughts here:
+My thoughts here:
 
 - Research models for stock prediction, sentiment analysis, as well as more niche trackers (weather, patterns, etc)
 - Explore integration with API for headlines and articles

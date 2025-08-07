@@ -27,6 +27,9 @@ RUN python3 -m venv /opt/venv && \
 # Set environment for using the venv by default
 ENV PATH="/opt/venv/bin:$PATH"
 
+# Copy secrets into the container
+COPY secrets.env /opt/app/.env
+
 # TODO: For connecting to Postgres in C++: later add libpqxx or similar
 
 WORKDIR /app
