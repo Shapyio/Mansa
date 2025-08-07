@@ -1,0 +1,15 @@
+{
+  "cmake.buildDirectory": "${workspaceFolder}/build",
+  "cmake.configureOnOpen": true,
+  "C_Cpp.default.compilerPath": "/usr/bin/g++",
+  "C_Cpp.default.includePath": [
+    "${workspaceFolder}/**"
+  ],
+  "editor.formatOnSave": true,
+  "files.associations": {
+    "*.tpp": "cpp"
+  },
+  "terminal.integrated.defaultProfile.linux": "bash",
+  "python-envs.defaultEnvManager": "ms-python.python:system",
+  "python-envs.pythonProjects": []
+}

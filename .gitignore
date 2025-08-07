@@ -78,7 +78,6 @@ secrets.env
 credentials.json
 
 # === VSCode ===
-.vscode/
 *.code-workspace
 +!launch.json
 +!settings.json

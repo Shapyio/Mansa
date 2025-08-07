@@ -1,0 +1,22 @@
+{
+  "name": "Stock Predictor Dev",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "settings": {
+    "python.defaultInterpreterPath": "/opt/venv/bin/python3.12", // Set python path
+    "terminal.integrated.shell.linux": "/bin/bash"
+  },
+  "extensions": [
+    "ms-vscode.cpptools",
+    "ms-vscode.cmake-tools",
+    "ms-python.python"
+  ],
+  "forwardPorts": [],
+  "runArgs": [ // Add env to container 
+    "--env-file",
+    "secrets.env"
+  ],
+  "postCreateCommand": "mkdir -p build && cmake -S . -B build"
+}
