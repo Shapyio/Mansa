@@ -1,11 +1,13 @@
-version: '3.8'
-
 services:
   app:
     build:
       context: .
       dockerfile: .devcontainer/Dockerfile
-    container_name: cpp_app
+    container_name: app
+    # For terminal:
+    command: bash
+    tty: true
+    stdin_open: true
     volumes:
       - .:/app
     working_dir: /app
@@ -15,16 +17,23 @@ services:
       - DATABASE_URL=postgresql://postgres:password@db:5432/stockdb
 
   db:
-    image: postgres:15
-    container_name: stock_db
+    image: timescale/timescaledb:latest-pg15  # Use TimescaleDB with PostgreSQL 15
+    container_name: db
     environment:
       POSTGRES_DB: stockdb
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init-timescaledb.sql:/docker-entrypoint-initdb.d/init-timescaledb.sql
     ports:
       - "5432:5432"
+    restart: always # Make sure DB container comes up again if it goes down
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d stockdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:

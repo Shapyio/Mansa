@@ -1,0 +1,1 @@
+CREATE EXTENSION IF NOT EXISTS timescaledb; -- Enable timescaleDB extension on database

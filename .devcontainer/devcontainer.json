@@ -1,11 +1,10 @@
 {
-  "name": "Stock Predictor Dev",
-  "build": {
-    "dockerfile": "Dockerfile",
-    "context": ".."
-  },
+  "name": "Mansa Dev",
+  "dockerComposeFile": "../docker-compose.yml", // Use docker-compose
+  "service": "app", // The name of your main container
+  "workspaceFolder": "/app",
   "settings": {
-    "python.defaultInterpreterPath": "/opt/venv/bin/python3.12", // Set python path
+    "python.defaultInterpreterPath": "/opt/venv/bin/python3", // Set python path
     "terminal.integrated.shell.linux": "/bin/bash"
   },
   "extensions": [
@@ -13,10 +12,13 @@
     "ms-vscode.cmake-tools",
     "ms-python.python"
   ],
-  "forwardPorts": [],
+  "forwardPorts": [
+    5432
+  ],
   "runArgs": [ // Add env to container 
     "--env-file",
     "secrets.env"
   ],
-  "postCreateCommand": "mkdir -p build && cmake -S . -B build"
+  "postCreateCommand": "mkdir -p build && cmake -S . -B build",
+  "shutdownAction": "stopCompose"
 }
