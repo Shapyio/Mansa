@@ -4,7 +4,7 @@
   "service": "app", // The name of your main container
   "workspaceFolder": "/app",
   "settings": {
-    "python.defaultInterpreterPath": "/opt/venv/bin/python3", // Set python path
+    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python", // Set python path
     "terminal.integrated.shell.linux": "/bin/bash"
   },
   "extensions": [
@@ -14,10 +14,6 @@
   ],
   "forwardPorts": [
     5432
-  ],
-  "runArgs": [ // Add env to container 
-    "--env-file",
-    "secrets.env"
   ],
   "postCreateCommand": "mkdir -p build && cmake -S . -B build",
   "shutdownAction": "stopCompose"

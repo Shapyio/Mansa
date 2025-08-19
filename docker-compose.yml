@@ -11,6 +11,8 @@ services:
     volumes:
       - .:/app
     working_dir: /app
+    env_file:
+      - ./secrets.env
     depends_on:
       - db
     environment:
@@ -25,7 +27,7 @@ services:
       POSTGRES_PASSWORD: password
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init-timescaledb.sql:/docker-entrypoint-initdb.d/init-timescaledb.sql
+      - /data/init-timescaledb.sql:/docker-entrypoint-initdb.d/init-timescaledb.sql
     ports:
       - "5432:5432"
     restart: always # Make sure DB container comes up again if it goes down
