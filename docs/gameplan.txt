@@ -201,3 +201,75 @@ Would you like me to generate:
 * A sample `README.md` template?
 
 Let me know how deep you want to go in each part.
+
+## Other Valuable but Not Added Stock Features to DB
+
+These are either:
+
+Harder to obtain consistently, or
+
+Better stored in a separate table/model, or
+
+Time-dependent, so they should be tied to timestamp in stock_data or another time-series table.
+
+Examples:
+🕓 Time-Series Derived Stats
+
+Moving averages (SMA, EMA)
+
+RSI (Relative Strength Index)
+
+MACD indicators
+
+Bollinger Bands
+
+Daily % change
+
+Volatility
+
+➡️ Should go in a stock_indicators table, time-aligned with stock_data.
+
+📰 Sentiment & News Signals
+
+Sentiment score (daily/weekly)
+
+Trending keywords
+
+News volume
+
+Social media mentions
+
+➡️ These are important for your ML model but should be handled in natural language processing or a dedicated sentiment_data table.
+
+🧠 Alternative Datasets
+
+Insider trades
+
+Institutional ownership %
+
+Supply chain exposure
+
+Lawsuits/political risk
+
+Patent volume
+
+Product launches or earnings forecasts
+
+Analyst ratings / consensus target
+
+➡️ These are useful for fundamental ML inference, but they require either scraping, premium APIs, or NLP.
+
+---
+
+### Code:
+```sql
+-- Potential table for news articles
+CREATE TABLE news_articles (
+    id SERIAL PRIMARY KEY,
+    symbol TEXT REFERENCES company_info(symbol) ON DELETE CASCADE,
+    published_at TIMESTAMP NOT NULL,
+    title TEXT,
+    content TEXT,
+    sentiment_score NUMERIC
+);
+```

@@ -27,9 +27,9 @@ services:
       POSTGRES_PASSWORD: password
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - /data/init-timescaledb.sql:/docker-entrypoint-initdb.d/init-timescaledb.sql
+      - ./data/init-timescaledb.sql:/docker-entrypoint-initdb.d/init-timescaledb.sql
     ports:
-      - "5432:5432"
+      - "0.0.0.0:5432:5432"
     restart: always # Make sure DB container comes up again if it goes down
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d stockdb"]
