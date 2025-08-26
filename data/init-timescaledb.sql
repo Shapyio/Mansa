@@ -1,90 +1,52 @@
--- Enable TimescaleDB
+-- Enable TimescaleDB extension
 CREATE EXTENSION IF NOT EXISTS timescaledb;
 
--- Create stock_data table
+\echo 'Creating table: stock_data'
 CREATE TABLE IF NOT EXISTS stock_data (
-    id SERIAL PRIMARY KEY,
     symbol TEXT NOT NULL,
-    timestamp TIMESTAMPTZ NOT NULL,
-    open DOUBLE PRECISION,
-    high DOUBLE PRECISION,
-    low DOUBLE PRECISION,
-    close DOUBLE PRECISION,
+    timestamp TIMESTAMPTZ NOT NULL PRIMARY KEY,
+    open NUMERIC,
+    high NUMERIC,
+    low NUMERIC,
+    close NUMERIC,
     volume BIGINT,
     trade_count INTEGER,
-    vwap DOUBLE PRECISION
-); -- NOTE: If too slow/large, partition table by symbol
+    vwap NUMERIC
+);
 
--- Turn it into a hypertable for performance
-SELECT create_hypertable('stock_data', 'timestamp', if_not_exists => TRUE);
+-- Having trouble making hypertable for some reason...
+\echo 'Converting stock_data to hypertable...'
+DO $$
+BEGIN
+    BEGIN
+        PERFORM create_hypertable('stock_data', 'timestamp', if_not_exists => TRUE);
+        RAISE NOTICE 'Hypertable created.';
+    EXCEPTION WHEN OTHERS THEN
+        RAISE WARNING 'Failed to create hypertable: %', SQLERRM;
+    END;
+END;
+$$;
 
--- Create company_info table
-CREATE TABLE IF NOT EXISTS company_info (
+\echo 'Creating table: companies'
+CREATE TABLE IF NOT EXISTS companies (
     id SERIAL PRIMARY KEY,
-    symbol TEXT UNIQUE NOT NULL,      -- Ticker
-    name TEXT NOT NULL,               -- Full name
-    description TEXT,                 -- Company bio
-    industry TEXT,
+    symbol TEXT UNIQUE NOT NULL,
+    name TEXT,
     sector TEXT,
-    ceo TEXT,
-    headquarters TEXT,
-    founded_year INT
+    industry TEXT,
+    country TEXT
 );
 
--- Create company_metrics table
-CREATE TABLE IF NOT EXISTS company_metrics_history (
+\echo 'Creating table: company_metadata'
+CREATE TABLE IF NOT EXISTS company_metadata (
     id SERIAL PRIMARY KEY,
-    symbol TEXT REFERENCES company_info(symbol) ON DELETE CASCADE,
-
-    -- Financial data
+    company_id INTEGER NOT NULL REFERENCES companies(id),
+    date DATE NOT NULL,
     market_cap BIGINT,
-    revenue BIGINT,
-    net_income BIGINT,
-    ebita BIGINT,
-    debt BIGINT,
-    assets BIGINT,
-    equity BIGINT,
-
-    -- Market data
-    shares_outstanding BIGINT,
-    free_float BIGINT,
-    beta NUMERIC,
-    dividend_yield NUMERIC,
     pe_ratio NUMERIC,
-
-    -- Employee count (Variable company_info)
-    employees INT,
-
-    -- Timestamp of data
-    recorded_at TIMESTAMP NOT NULL DEFAULT NOW()
+    dividend_yield NUMERIC,
+    employees INTEGER,
+    UNIQUE (company_id, date)
 );
 
--- VIEWS
--- View of company currently
-CREATE VIEW company_metrics_latest AS
-SELECT cm.*
-FROM company_metrics_history cm
-JOIN (
-    SELECT symbol, MAX(recorded_at) AS max_time
-    FROM company_metrics_history
-    GROUP BY symbol
-) latest
-ON cm.symbol = latest.symbol AND cm.recorded_at = latest.max_time;
-
--- View for latest metrics per company
-CREATE VIEW latest_company_metrics AS
-SELECT DISTINCT ON (symbol) *
-FROM company_metrics_history
-ORDER BY symbol, recorded_at DESC;
-
--- Add FK constraint after both tables exist
-ALTER TABLE stock_data
-ADD CONSTRAINT fk_symbol
-FOREIGN KEY (symbol) REFERENCES company_info(symbol) ON DELETE CASCADE;
-
--- INDEXING
--- ...for querying a company’s historical metrics quickly
-CREATE INDEX idx_metrics_symbol_time ON company_metrics_history(symbol, recorded_at DESC);
-
--- ...for other tables:
-CREATE INDEX idx_prices_symbol_date ON stock_prices(symbol, price_date DESC);
+\echo 'All tables created.'
