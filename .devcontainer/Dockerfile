@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y \
     pkg-config \
     python3 \
     python3-pip \
-    python3.12-venv \
+    python3-venv \
     && apt-get clean
 
 # Optional: create a python3 alias to just 'python'
