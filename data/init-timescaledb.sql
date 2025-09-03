@@ -4,24 +4,24 @@ CREATE EXTENSION IF NOT EXISTS timescaledb;
 \echo 'Creating lookup tables: sectors and industries'
 CREATE TABLE IF NOT EXISTS sectors (
     id SERIAL PRIMARY KEY,
-    name TEXT UNIQUE NOT NULL
+    name VARCHAR(25) UNIQUE NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS industries (
     id SERIAL PRIMARY KEY,
-    name TEXT UNIQUE NOT NULL
+    name VARCHAR(50) UNIQUE NOT NULL
 );
 
 \echo 'Creating table: companies'
 CREATE TABLE IF NOT EXISTS companies (
     id SERIAL PRIMARY KEY,
-    symbol TEXT UNIQUE NOT NULL,
-    name TEXT,
+    symbol VARCHAR(10) UNIQUE NOT NULL,
+    name VARCHAR(100),
     sector_id INT REFERENCES sectors(id),
     industry_id INT REFERENCES industries(id),
-    country TEXT,
-    state TEXT,
-    city TEXT
+    country VARCHAR(50),
+    state VARCHAR(25),
+    city VARCHAR(25)
 );
 
 \echo 'Creating table: stock_data'
