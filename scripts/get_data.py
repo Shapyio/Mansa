@@ -17,12 +17,15 @@ client = StockHistoricalDataClient(
     secret_key=os.getenv("ALPACA_SECRET_KEY")
 )
 
+# Choose ticker
+symbol = "AAPL"
+
 # Request parameters
 request_params = StockBarsRequest(
-    symbol_or_symbols="AAPL",
+    symbol_or_symbols=symbol,
     timeframe=TimeFrame.Day,
-    start=datetime.datetime(2025, 1, 1),
-    end=datetime.datetime(2025, 8, 6),
+    start=datetime.datetime(2025, 8, 27),
+    end=datetime.datetime(2025, 9, 3),
     feed="iex"
 )
 
@@ -31,19 +34,18 @@ df = client.get_stock_bars(request_params).df.reset_index()
 
 # --- DataFrame Cleanup ---
 df.rename(columns={
-    'timestamp': 'timestamp',
-    'symbol': 'symbol',
-    'open': 'open',
-    'high': 'high',
-    'low': 'low',
-    'close': 'close',
-    'volume': 'volume',
-    'trade_count': 'trade_count',
-    'vwap': 'vwap'
+    "timestamp": "timestamp",
+    "symbol": "symbol",
+    "open": "open",
+    "high": "high",
+    "low": "low",
+    "close": "close",
+    "volume": "volume",
+    "trade_count": "trade_count",
+    "vwap": "vwap",
 }, inplace=True)
 
-# Ensure column order matches DB schema
-df = df[['timestamp', 'symbol', 'open', 'high', 'low', 'close', 'volume', 'trade_count', 'vwap']]
+df = df[["timestamp", "symbol", "open", "high", "low", "close", "volume", "trade_count", "vwap"]]
 
 # --- Connect to TimescaleDB ---
 db_user = os.getenv("POSTGRES_USER", "postgres")
@@ -55,12 +57,36 @@ db_name = os.getenv("POSTGRES_DB", "stockdb")
 DATABASE_URL = f"postgresql://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}"
 engine = create_engine(DATABASE_URL)
 
-# --- Insert with UPSERT logic --- 
-# Upsert avoids conflicting data
+# --- Ensure company exists ---
+with engine.begin() as conn:
+    result = conn.execute(
+        text("SELECT id FROM companies WHERE symbol = :s"),
+        {"s": symbol}
+    ).fetchone()
+
+    if not result:
+        # Insert company if missing
+        conn.execute(
+            text("INSERT INTO companies (symbol, name) VALUES (:s, :n) ON CONFLICT (symbol) DO NOTHING"),
+            {"s": symbol, "n": f"{symbol} Inc."}
+        )
+        result = conn.execute(
+            text("SELECT id FROM companies WHERE symbol = :s"),
+            {"s": symbol}
+        ).fetchone()
+
+    company_id = result[0]
+
+# --- Add company_id to DataFrame ---
+df["company_id"] = company_id
+df = df[["company_id", "timestamp", "open", "high", "low", "close", "volume", "trade_count", "vwap"]]
+
+# --- Insert with UPSERT logic ---
+# Upsert ensures stocks won't conflict with new data
 insert_query = text("""
-    INSERT INTO stock_data (timestamp, symbol, open, high, low, close, volume, trade_count, vwap)
-    VALUES (:timestamp, :symbol, :open, :high, :low, :close, :volume, :trade_count, :vwap)
-    ON CONFLICT (timestamp, symbol)
+    INSERT INTO stock_data (company_id, timestamp, open, high, low, close, volume, trade_count, vwap)
+    VALUES (:company_id, :timestamp, :open, :high, :low, :close, :volume, :trade_count, :vwap)
+    ON CONFLICT (company_id, timestamp)
     DO UPDATE SET
         open = EXCLUDED.open,
         high = EXCLUDED.high,
@@ -75,4 +101,4 @@ with engine.begin() as conn:
     for _, row in df.iterrows():
         conn.execute(insert_query, row.to_dict())
 
-print(f"Upserted {len(df)} rows into 'stock_data'")
+print(f"Upserted {len(df)} rows for {symbol} into 'stock_data'")

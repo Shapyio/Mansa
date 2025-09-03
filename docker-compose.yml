@@ -17,6 +17,9 @@ services:
       - db
     environment:
       - DATABASE_URL=postgresql://postgres:password@db:5432/stockdb
+    dns: # Some firewall I set blocks internet access so setting dns fixes (need internet for API)
+      - 8.8.8.8
+      - 1.1.1.1
 
   db:
     image: timescale/timescaledb:latest-pg15  # Use TimescaleDB with PostgreSQL 15

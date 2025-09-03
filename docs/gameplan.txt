@@ -194,14 +194,6 @@ jobs:
 
 ---
 
-Would you like me to generate:
-
-* A starting `Dockerfile` and `CMakeLists.txt`?
-* A JIRA Epic breakdown in CSV or task list format?
-* A sample `README.md` template?
-
-Let me know how deep you want to go in each part.
-
 ## Other Valuable but Not Added Stock Features to DB
 
 These are either:
