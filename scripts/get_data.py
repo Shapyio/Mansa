@@ -24,8 +24,8 @@ symbol = "AAPL"
 request_params = StockBarsRequest(
     symbol_or_symbols=symbol,
     timeframe=TimeFrame.Day,
-    start=datetime.datetime(2025, 8, 27),
-    end=datetime.datetime(2025, 9, 3),
+    start=datetime.datetime(2010, 1, 1),
+    end=datetime.datetime(2025, 9, 7),
     feed="iex"
 )
 

@@ -22,6 +22,7 @@ compile_commands.json
 *~
 .DS_Store
 Thumbs.db
+gameplan.txt
 
 # === Docker ===
 *.container
