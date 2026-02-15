@@ -3,3 +3,4 @@ pandas
 python-dotenv
 sqlalchemy
 psycopg2-binary
+pytz # Required for Alpaca (Timezone import)

@@ -34,7 +34,6 @@ CREATE TABLE IF NOT EXISTS stock_data (
     close NUMERIC,
     volume BIGINT,
     trade_count INTEGER,
-    vwap NUMERIC,
     PRIMARY KEY (company_id, timestamp)
 );
 
