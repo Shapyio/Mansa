@@ -33,7 +33,6 @@ CREATE TABLE IF NOT EXISTS stock_data (
     low NUMERIC,
     close NUMERIC,
     volume BIGINT,
-    trade_count INTEGER,
     PRIMARY KEY (company_id, timestamp)
 );
 
