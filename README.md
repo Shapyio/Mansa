@@ -3,8 +3,8 @@
 This project is a containerized, modular stock prediction and data analysis system designed for cross-platform development and deployment. The goal is to support prediction logic, web scraping, sentiment analysis, indicators, and API integration—all in a scalable pipeline.
 
 ## Getting Started
-### ⚙️ How to Build and Run the Project
 **NOTE:** Prerequisites are required to successfully run scripts. Namely, account(s) and API key(s) from Alpaca and Financial Modeling Prep are needed. See Prerequisites header below for more information.
+### ⚙️ How to Build and Run the Project
 1. Start the container
 
 Run the following from your project root to spin up your dev environment:
