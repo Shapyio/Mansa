@@ -1,29 +1,90 @@
 services:
-  app:
+
+  # ---------------------------
+  # FastAPI API Service
+  # ---------------------------
+  api:
     build:
-      context: .
-      dockerfile: .devcontainer/Dockerfile
-    container_name: app
-    # For terminal:
-    command: bash
-    tty: true
-    stdin_open: true
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mansa_api
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     volumes:
-      - .:/app
-    working_dir: /app
+      - ./backend:/app
+      - ./logs/api:/app/logs
     env_file:
       - ./secrets.env
-    depends_on:
-      - db
     environment:
       - DATABASE_URL=postgresql://postgres:password@db:5432/stockdb
-    dns: # Some firewall I set blocks internet access so setting dns fixes (need internet for API)
+      - REDIS_HOST=redis
+    depends_on:
+      - db
+      - redis
+    ports:
+      - "8000:8000"
+    dns:
       - 8.8.8.8
       - 1.1.1.1
 
+
+  # ---------------------------
+  # Background Worker
+  # ---------------------------
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mansa_worker
+    command: python worker.py
+    volumes:
+      - ./backend:/app
+      - ./logs/worker:/app/logs
+    env_file:
+      - ./secrets.env
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@db:5432/stockdb
+      - REDIS_HOST=redis
+    depends_on:
+      - db
+      - redis
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+
+
+  # ---------------------------
+  # React Frontend
+  # ---------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: mansa_frontend
+    command: npm run dev
+    volumes:
+      - ./frontend:/app
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+
+  # ---------------------------
+  # Redis (Job Queue / Cache)
+  # ---------------------------
+  redis:
+    image: redis:7
+    container_name: mansa_redis
+    ports:
+      - "6379:6379"
+
+
+  # ---------------------------
+  # TimescaleDB
+  # ---------------------------
   db:
-    image: timescale/timescaledb:latest-pg15  # Use TimescaleDB with PostgreSQL 15
-    container_name: db
+    image: timescale/timescaledb:latest-pg15
+    container_name: mansa_db
     environment:
       POSTGRES_DB: stockdb
       POSTGRES_USER: postgres
@@ -32,13 +93,14 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./data/init-timescaledb.sql:/docker-entrypoint-initdb.d/init-timescaledb.sql
     ports:
-      - "0.0.0.0:5432:5432"
-    restart: always # Make sure DB container comes up again if it goes down
+      - "5432:5432"
+    restart: always
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d stockdb"]
       interval: 10s
       timeout: 5s
       retries: 5
+
 
 volumes:
   postgres_data:

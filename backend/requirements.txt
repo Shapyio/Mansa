@@ -4,3 +4,8 @@ python-dotenv
 sqlalchemy
 psycopg2-binary
 pytz # Required for Alpaca (Timezone import)
+fastapi # Backend dev
+uvicorn[standard] # server
+redis # for job management
+pydantic # data validation/parse
+rq # redis queue to schedule jobs
