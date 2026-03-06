@@ -1,142 +1,436 @@
-# Mansa: Stock Prediction AI
+# MANSA
+## Stock Prediction and Market Intelligence Platform
 
-This project is a containerized, modular stock prediction and data analysis system designed for cross-platform development and deployment. The goal is to support prediction logic, web scraping, sentiment analysis, indicators, and API integration—all in a scalable pipeline.
+MANSA is a containerized, modular platform for financial data ingestion, feature engineering, machine learning experimentation, and predictive analytics for equities markets.
 
-## Getting Started
-**NOTE:** Prerequisites are required to successfully run scripts. Namely, account(s) and API key(s) from Alpaca and Financial Modeling Prep are needed. See Prerequisites header below for more information.
-### ⚙️ How to Build and Run the Project
-1. Start the container
+The system is designed as a scalable research and production environment for quantitative finance workflows. It supports automated data ingestion, feature pipelines, model training, batch inference, and interactive monitoring through a web dashboard.
 
-Run the following from your project root to spin up your dev environment:
+The architecture emphasizes reproducibility, modularity, and extensibility to support future expansion into advanced AI systems capable of autonomous market analysis.
 
-``` bash
-docker-compose up --build
+## System Architecture
+
+The platform is composed of multiple services orchestrated through Docker.
+
+| Service | Purpose |
+| :--- | :--- |
+| API | FastAPI service providing REST endpoints for data, models, and jobs |
+| Worker | Background worker executing asynchronous jobs |
+| Frontend | React dashboard for monitoring and control |
+| Database | TimescaleDB time-series database for market data |
+| Redis | Queue backend for asynchronous job processing |
+
+The system architecture allows separation of:
+
+- Data ingestion
+- Feature computation
+- Model training
+- Prediction pipelines
+- Dashboard visualization
+
+This separation prevents long-running tasks from blocking API requests and allows horizontal scaling later.
+
+## Core Technologies
+
+- Backend API: FastAPI
+- Frontend: React with Vite
+- Database: TimescaleDB
+- Queue System: RQ
+- Cache / Queue Broker: Redis
+
+Planned ML infrastructure:
+- Experiment tracking: MLflow
+- Workflow orchestration: Apache Airflow
+
+## Project Goals
+
+The long-term goal is to build a full-featured financial AI system capable of:
+
+- Predicting price movement
+- Predicting volatility
+- Generating trading signals
+- Performing sentiment analysis on financial news
+- Incorporating macroeconomic signals
+- Running ensembles of multiple models
+- Supporting automated decision assistance
+
+The system will evolve into an **AI-assisted quantitative research platform**.
+
+## Project Phases
+### Phase 1 — Core Infrastructure
+#### Objectives:
+- Containerized development environment
+- TimescaleDB time-series storage
+- Market data ingestion pipeline
+- Feature computation framework
+- React monitoring dashboard
+
+#### Deliverables:
+- 5-minute market data storage
+- API endpoints for querying data
+- Worker system for asynchronous jobs
+- Dashboard widgets for system monitoring
+
+### Phase 2 — Feature Store
+#### Objectives:
+- Compute technical indicators
+- Store derived features separately from raw data
+- Enable dynamic dataset creation for training
+
+Examples of features:
+- RSI
+- MACD
+- Volatility metrics
+- Moving averages
+- Market-relative strength
+
+This stage creates the foundation for reliable machine learning workflows.
+
+### Phase 3 — Model Training System
+#### Objectives:
+- Dynamic dataset builder
+- Experiment tracking
+- Model versioning
+- Hyperparameter tuning
+
+Models will be exported to ONNX format for standardized inference.
+
+Potential models include:
+- Gradient boosting
+- Recurrent neural networks
+- Transformers
+- Reinforcement learning agents
+- Ensemble models
+
+### Phase 4 — Prediction Engine
+#### Objectives:
+- Real-time predictions
+- Batch inference across all tracked assets
+- Prediction persistence in database
+
+The system will support predictions such as:
+- short-term price movement
+- volatility forecasts
+- daily market outlook
+
+### Phase 5 — AI Research Agent
+#### Future goal:
+Create an AI system capable of interacting with the platform's tools and datasets to conduct its own market analysis.
+
+Potential capabilities include:
+- querying financial data
+- evaluating model outputs
+- analyzing news sentiment
+- generating market forecasts
+
+## Directory Structure
+
+Recommended project layout:
 ```
-
-2. Attach VSCode to the container
-
-- Open the project in VSCode.
-- You should be prompted to "Reopen in Container".
-- If not, press `F1` and choose `Dev Containers: Reopen in Container`.
-
-3. Build the project
-
-From inside the container terminal or via VSCode terminal:
-
-``` bash
-cmake -S . -B build
-cmake --build build
-```
-
-4. Run the project
-
-``` bash 
-./build/mansa
-```
-
----
-
-## 📅 Project Milestones
-
-#### 🧠 Epic: Environment & Tooling Setup
-
-- [x] Dev container setup with Docker & VSCode
-- [ ] GitHub Actions for CI
-- [ ] Cross-platform CMake build
-
-#### 📊 Epic: Data Collection System
-
-- [ ] Financial API integration (e.g., AlphaVantage, Yahoo Finance)
-- [ ] Sentiment scraping (Reddit, news, Twitter)
-- [ ] Data pre-processing and cleanup
-
-#### 🧠 Epic: Prediction Engine
-
-- [ ] Implement core logic (indicators, thresholds)
-- [ ] Trainable ML model support (regression/classification)
-- [ ] Evaluate and test predictions
-
-#### 💻 Epic: Interface & Visualization
-
-- [ ] Simple CLI or web UI to view predictions
-- [ ] Plot historical vs predicted trends
-- [ ] JSON API to fetch results
-
----
-
-## 📁 Project Structure (Reference to follow)
-
-```plaintext
-Mansa/
-├── .devcontainer/            # VSCode devcontainer configs
-│   ├── Dockerfile            # Base image with C++/Python/DB tools
-│   └── devcontainer.json     # Container setup and features
+MANSA
 │
-├── .vscode/                  # Editor settings (auto-format, linting)
-│   └── settings.json
+├── .devcontainer
+│   └── devcontainer.json
 │
-├── cmake/                    # Optional: reusable CMake modules
-│   └── CustomModule.cmake    # E.g., Find dependencies, macros
+├── backend
+│   │
+│   ├── app
+│   │   ├── api                # FastAPI routers
+│   │   │   ├── routes
+│   │   │   │   ├── market.py
+│   │   │   │   ├── models.py
+│   │   │   │   ├── predictions.py
+│   │   │   │   └── jobs.py
+│   │   │
+│   │   ├── core               # configuration / settings
+│   │   │   ├── config.py
+│   │   │   └── logging.py
+│   │   │
+│   │   ├── db                 # database access
+│   │   │   ├── models.py
+│   │   │   └── session.py
+│   │   │
+│   │   ├── services           # business logic
+│   │   │   ├── data_service.py
+│   │   │   ├── feature_service.py
+│   │   │   ├── model_service.py
+│   │   │   └── prediction_service.py
+│   │   │
+│   │   ├── ml                 # ML training & inference
+│   │   │   ├── training
+│   │   │   ├── inference
+│   │   │   └── datasets
+│   │   │
+│   │   ├── workers            # background tasks
+│   │   │   ├── ingest_jobs.py
+│   │   │   ├── feature_jobs.py
+│   │   │   ├── training_jobs.py
+│   │   │   └── prediction_jobs.py
+│   │   │
+│   │   └── main.py            # FastAPI entrypoint
+│   │
+│   ├── scripts                # standalone utility scripts
+│   │
+│   ├── requirements.txt
+│   ├── Dockerfile
+│   └── worker.py
 │
-├── src/                      # Application source code
-│   ├── main.cpp              # Entry point
-│   ├── ai/                   # ML/AI logic and models
-│   ├── api/                  # API clients (financial/news)
-│   ├── engine/               # Core engine logic (prediction, etc.)
-│   └── utils/                # Utility functions
+├── frontend
+│   │
+│   ├── src
+│   │   ├── components
+│   │   │   ├── grid
+│   │   │   ├── layout
+│   │   │   └── widgets
+│   │   │
+│   │   ├── pages
+│   │   │   ├── Dashboard.tsx
+│   │   │   ├── Models.tsx
+│   │   │   ├── DataExplorer.tsx
+│   │   │   └── Predictions.tsx
+│   │   │
+│   │   ├── services           # API clients
+│   │   │   └── api.ts
+│   │   │
+│   │   ├── App.tsx
+│   │   └── main.tsx
+│   │
+│   ├── Dockerfile
+│   └── package.json
 │
-├── include/                  # Public header files
-│   ├── ai.hpp
-│   ├── engine.hpp
-│   └── ...
+├── data
+│   ├── import
+│   └── init-timescaledb.sql
 │
-├── test/                     # Unit and integration tests
-│   ├── test_main.cpp
-│   └── ai_test.cpp
+├── logs
+│   ├── api
+│   └── worker
 │
-├── scripts/                  # Dev/test/deploy scripts
-│   ├── setup.sh              # Setup environment
-│   ├── run_container.sh      # Run docker-compose containers
-│   └── fetch_data.py         # Data gathering
-│
-├── data/                     # Local data storage (logs, raw data)
-│   └── input.csv
-│
-├── docs/                     # Documentation (design, architecture)
+├── docs
 │   ├── architecture.md
-│   └── api_reference.md
+│   └── system_design.md
 │
-├── docker-compose.yml        # Multi-container orchestration
-├── CMakeLists.txt            # Top-level build script
+├── docker-compose.yml
+├── secrets.env
 ├── .gitignore
-└── README.md                 # This file
+└── README.md
 ```
 
-### 🛠️ CMake Notes
+## Database Design
 
-- Keep a top-level `CMakeLists.txt` to drive the build.
-- Add `CMakeLists.txt` files to subdirectories (`src/`, `test/`) to build targets modularly.
-- `cmake/` can contain custom modules or third-party config helpers.
+Primary storage is handled by TimescaleDB using hypertables.
 
-### 🚢 Docker & Containerization
+Core tables include:
+- `stocks`
+- `features`
+- `companies`
+- `predictions`
+- `models`
+- `training_runs`
 
-This project is containerized using a multi-container Docker Compose setup, including:
+This design separates:
+- raw data
+- derived features
+- model outputs
+- experiment tracking
 
-- `dev`: Development container with compilers, CMake, Python, and VSCode features
-- `db`: Postgres database container for storing scraped or processed data
+## API Design
 
-You can spin it up using:
+The API exposes endpoints for:
 
-```bash
-docker-compose up --build
+Market Data
+```
+/market/prices
+/market/features
+```
+Models
+```
+/models/train
+/models/list
+/models/info
+```
+Predictions
+```
+/predictions/latest
+/predictions/top-gainers
+```
+Job Control
+```
+/jobs/ingest
+/jobs/compute-features
+/jobs/train-model
+/jobs/predict
+```
+All long-running tasks are executed asynchronously through Redis queues.
+
+## Docker Services
+
+The platform runs five containers.
+
+### API Service
+
+FastAPI backend exposing REST endpoints.
+
+### Worker
+Processes background jobs such as:
+- data ingestion
+- feature generation
+- model training
+- prediction pipelines
+
+### Frontend
+React dashboard used for:
+- monitoring system state
+- visualizing data
+- controlling pipelines
+
+### Redis
+- Provides queue infrastructure for background tasks.
+
+### Database
+- Stores time-series financial data and model outputs.
+
+## Docker Compose
+```yaml
+services:
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mansa_api
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ./backend:/app
+      - ./logs/api:/app/logs
+    env_file:
+      - ./secrets.env
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@db:5432/stockdb
+      - REDIS_HOST=redis
+    depends_on:
+      - db
+      - redis
+    ports:
+      - "8000:8000"
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mansa_worker
+    command: python worker.py
+    volumes:
+      - ./backend:/app
+      - ./logs/worker:/app/logs
+    env_file:
+      - ./secrets.env
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@db:5432/stockdb
+      - REDIS_HOST=redis
+    depends_on:
+      - db
+      - redis
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: mansa_frontend
+    command: npm run dev
+    volumes:
+      - ./frontend:/app
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api
+
+  redis:
+    image: redis:7
+    container_name: mansa_redis
+    ports:
+      - "6379:6379"
+
+  db:
+    image: timescale/timescaledb:latest-pg15
+    container_name: mansa_db
+    environment:
+      POSTGRES_DB: stockdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./data/init-timescaledb.sql:/docker-entrypoint-initdb.d/init-timescaledb.sql
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres_data:
 ```
 
----
+## Building and Running the System
 
-## ✍️ Personal Notes
+Start the full system from the project root:
+```
+docker compose up --build
+```
+Services will be available at:
+API
+```
+http://localhost:8000
+```
+Frontend
+```
+http://localhost:5173
+```
+Database
+```
+localhost:5432
+```
+Redis
+```
+localhost:6379
+```
 
-My thoughts here:
+## API Keys and External Services
 
-- Research models for stock prediction, sentiment analysis, as well as more niche trackers (weather, patterns, etc)
-- Explore integration with API for headlines and articles
-- Keep notebook with ML experiment results
+The platform requires API credentials for financial data providers.
+
+Current integrations:
+
+- [Alpaca Markets API](https://alpaca.markets/)
+- [Financial Modeling Prep API](https://site.financialmodelingprep.com/)
+
+Credentials must be placed in `secrets.env`.
+
+Example configuration:
+```
+ALPACA_API_KEY=your_key
+ALPACA_SECRET_KEY=your_secret
+
+FMP_API_KEY=your_key
+```
+
+These credentials are loaded by the API and worker containers.
+
+## Future Integrations
+
+Planned external services include:
+- Financial news providers
+- Social media sentiment analysis
+- Macroeconomic data APIs
+- Weather data APIs for commodity-sensitive assets
+
+## Development Notes
+
+Wished improvements for future development:
+- CI/CD pipelines
+- Automated testing
+- ML experiment tracking
+- Dataset versioning
+- Feature store management
+- Distributed worker scaling
+
+## Contact
+Email: sagievg@gmail.com
+
+LinkedIn: [LinkedIn](https://www.linkedin.com/in/shapiy-sagiev/)
