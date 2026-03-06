@@ -12,8 +12,11 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy app
-COPY . .
+# Copy core + app + jobs + worker
+COPY core/ ./core
+COPY app/ ./app
+COPY jobs/ ./jobs
+COPY worker/ ./worker
 
 ENV PYTHONUNBUFFERED=1
 

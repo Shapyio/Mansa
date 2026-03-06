@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Banner from "../components/layout/Banner";
 import TopBar from "../components/layout/TopBar";
 import Sidebar from "../components/layout/Sidebar";
 import DashboardGrid from "../components/grid/DashboardGrid";
@@ -8,7 +9,7 @@ export default function Dashboard() {
 
   return (
     <div style={{ height: "100vh", display: "flex", flexDirection: "column" }}>
-      <h1 />
+      <Banner />
       <TopBar toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
 
       <div style={{ flex: 1, display: "flex" }}>

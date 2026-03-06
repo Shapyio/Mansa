@@ -32,7 +32,6 @@ def get_company_data(symbol):
 
     # Only keep NASDAQ listings
     for item in data:
-        if item.get("exchange") == "NASDAQ":
             return item
 
     return None
@@ -109,7 +108,7 @@ def main():
             company_data = get_company_data(symbol)
 
             if not company_data:
-                print(f"No NASDAQ data found for {symbol}")
+                print(f"No data found for {symbol}")
                 continue
 
             upsert_company(cursor, company_data)

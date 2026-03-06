@@ -141,7 +141,7 @@ MANSA
 │   │   │   │   ├── predictions.py
 │   │   │   │   └── jobs.py
 │   │   │
-│   │   ├── core               # configuration / settings
+│   │   ├── core               # configuration / settings (shared logic between api and worker containers)
 │   │   │   ├── config.py
 │   │   │   └── logging.py
 │   │   │
@@ -160,7 +160,7 @@ MANSA
 │   │   │   ├── inference
 │   │   │   └── datasets
 │   │   │
-│   │   ├── workers            # background tasks
+│   │   ├── workers            # background tasks (jobs)
 │   │   │   ├── ingest_jobs.py
 │   │   │   ├── feature_jobs.py
 │   │   │   ├── training_jobs.py

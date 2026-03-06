@@ -66,4 +66,28 @@ CREATE TABLE IF NOT EXISTS company_metadata (
     PRIMARY KEY (company_id, date)
 );
 
+\echo 'Creating table: stock_features'
+CREATE TABLE IF NOT EXISTS stock_features (
+    company_id INT NOT NULL REFERENCES companies(id),
+    timestamp TIMESTAMPTZ NOT NULL,
+
+    -- technical indicators
+    sma_10 NUMERIC,
+    sma_50 NUMERIC,
+    rsi_14 NUMERIC,
+    macd NUMERIC,
+    volatility NUMERIC,
+
+    PRIMARY KEY (company_id, timestamp)
+);
+
+\echo 'Converting stocker_features to hypertable...'
+SELECT create_hypertable(
+    'stock_features',
+    'timestamp',
+    'company_id',
+    number_partitions => 4,
+    if_not_exists => TRUE
+);
+
 \echo 'All tables created.'

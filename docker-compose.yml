@@ -10,8 +10,8 @@ services:
     container_name: mansa_api
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     volumes:
-      - ./backend:/app
-      - ./logs/api:/app/logs
+      - ./backend/app:/app/app
+      - ./backend/core:/app/core
     env_file:
       - ./secrets.env
     environment:
@@ -26,7 +26,6 @@ services:
       - 8.8.8.8
       - 1.1.1.1
 
-
   # ---------------------------
   # Background Worker
   # ---------------------------
@@ -35,10 +34,11 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: mansa_worker
-    command: python worker.py
+    command: python worker/worker.py
     volumes:
-      - ./backend:/app
-      - ./logs/worker:/app/logs
+      - ./backend/core:/app/core
+      - ./backend/jobs:/app/jobs
+      - ./backend/worker:/app/worker
     env_file:
       - ./secrets.env
     environment:
@@ -50,7 +50,6 @@ services:
     dns:
       - 8.8.8.8
       - 1.1.1.1
-
 
   # ---------------------------
   # React Frontend
@@ -68,7 +67,6 @@ services:
     depends_on:
       - api
 
-
   # ---------------------------
   # Redis (Job Queue / Cache)
   # ---------------------------
@@ -77,7 +75,6 @@ services:
     container_name: mansa_redis
     ports:
       - "6379:6379"
-
 
   # ---------------------------
   # TimescaleDB
@@ -100,7 +97,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-
 
 volumes:
   postgres_data:
