@@ -90,4 +90,12 @@ SELECT create_hypertable(
     if_not_exists => TRUE
 );
 
+\echo 'Creating table: models'
+CREATE TABLE models (
+    model_id SERIAL PRIMARY KEY,
+    symbol VARCHAR(10),
+    accuracy NUMERIC,
+    created_at TIMESTAMP DEFAULT now()
+);
+
 \echo 'All tables created.'

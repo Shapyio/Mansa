@@ -133,46 +133,61 @@ MANSA
 │
 ├── backend
 │   │
-│   ├── app
-│   │   ├── api                # FastAPI routers
-│   │   │   ├── routes
-│   │   │   │   ├── market.py
-│   │   │   │   ├── models.py
-│   │   │   │   ├── predictions.py
-│   │   │   │   └── jobs.py
-│   │   │
-│   │   ├── core               # configuration / settings (shared logic between api and worker containers)
-│   │   │   ├── config.py
-│   │   │   └── logging.py
-│   │   │
-│   │   ├── db                 # database access
-│   │   │   ├── models.py
-│   │   │   └── session.py
-│   │   │
-│   │   ├── services           # business logic
-│   │   │   ├── data_service.py
-│   │   │   ├── feature_service.py
-│   │   │   ├── model_service.py
-│   │   │   └── prediction_service.py
-│   │   │
-│   │   ├── ml                 # ML training & inference
-│   │   │   ├── training
-│   │   │   ├── inference
-│   │   │   └── datasets
-│   │   │
-│   │   ├── workers            # background tasks (jobs)
-│   │   │   ├── ingest_jobs.py
-│   │   │   ├── feature_jobs.py
-│   │   │   ├── training_jobs.py
-│   │   │   └── prediction_jobs.py
-│   │   │
-│   │   └── main.py            # FastAPI entrypoint
-│   │
-│   ├── scripts                # standalone utility scripts
-│   │
-│   ├── requirements.txt
-│   ├── Dockerfile
-│   └── worker.py
+|   ├── app                    # FastAPI application
+|   │   ├── api                # API routes
+|   │   │   ├── routes
+|   │   │   │   ├── stocks.py
+|   │   │   │   ├── models.py
+|   │   │   │   └── jobs.py
+|   │   │   └── main.py
+|   │   │
+|   │   ├── services           # API business logic
+|   │   │   ├── stock_service.py
+|   │   │   ├── model_service.py
+|   │   │   └── job_service.py
+|   │   │
+|   │   └── dependencies.py
+|   │
+|   ├── core                   # Shared library (API + workers)
+|   │   ├── config.py
+|   │   ├── database.py
+|   │   ├── logging.py
+|   │   │
+|   │   ├── ingestion
+|   │   │   ├── company_ingestion.py
+|   │   │   ├── price_ingestion.py
+|   │   │   └── news_ingestion.py
+|   │   │
+|   │   ├── features
+|   │   │   ├── indicators.py
+|   │   │   └── feature_engineering.py
+|   │   │
+|   │   ├── models
+|   │   │   ├── training.py
+|   │   │   ├── prediction.py
+|   │   │   └── evaluation.py
+|   │   │
+|   │   └── utils
+|   │       └── helpers.py
+|   │
+|   ├── jobs                   # Worker job functions
+|   │   ├── ingest_companies.py
+|   │   ├── ingest_prices.py
+|   │   ├── compute_features.py
+|   │   ├── train_model.py
+|   │   └── run_backtest.py
+|   │
+|   ├── workers                # Worker entrypoints
+|   │   └── worker.py
+|   │
+|   ├── scripts                # DEV tools only (not used by containers)
+|   │   ├── update_companies.py
+|   │   ├── seed_db.py
+|   │   └── debug_api.py
+|   │
+|   ├── requirements.txt
+|   ├── Dockerfile
+|   └── .dockerignore
 │
 ├── frontend
 │   │
