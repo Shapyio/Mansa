@@ -7,7 +7,6 @@ from app.services import model_service
 
 router = APIRouter()
 
-
 @router.get("/")
 def models(db: Session = Depends(get_db)):
     return model_service.list_models(db)

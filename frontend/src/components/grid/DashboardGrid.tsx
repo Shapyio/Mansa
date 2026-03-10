@@ -4,7 +4,7 @@ import "react-resizable/css/styles.css";
 
 import ToolsWidget from "../widgets/WidgetTools";
 import PerformanceWidget from "../widgets/WidgetPerformance";
-import StocksTableWidget from "../widgets/WidgetsTable";
+import StocksTableWidget from "../widgets/WidgetsStocksTable";
 
 export default function DashboardGrid() {
   const layout = [

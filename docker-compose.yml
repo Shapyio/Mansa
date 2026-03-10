@@ -8,7 +8,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: mansa_api
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn app.api.main:app --host 0.0.0.0 --port 8000
     volumes:
       - ./backend/app:/app/app
       - ./backend/core:/app/core
@@ -18,8 +18,10 @@ services:
       - DATABASE_URL=postgresql://postgres:password@db:5432/stockdb
       - REDIS_HOST=redis
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy # ← waits for pg_isready to pass
+      redis:
+        condition: service_started
     ports:
       - "8000:8000"
     dns:
@@ -34,7 +36,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: mansa_worker
-    command: python worker/worker.py
+    command: python workers/worker.py
     volumes:
       - ./backend/core:/app/core
       - ./backend/workers:/app/workers
@@ -93,7 +95,7 @@ services:
       - "5432:5432"
     restart: always
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d stockdb"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d stockdb" ]
       interval: 10s
       timeout: 5s
       retries: 5
