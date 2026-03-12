@@ -1,26 +1,28 @@
-type Props = {
-  isOpen: boolean;
-};
+import { NavLink } from "react-router-dom";
 
-export default function Sidebar({ isOpen }: Props) {
+export default function Sidebar({ isOpen }) {
   if (!isOpen) return null;
 
   return (
-    <div style={{
-      width: "220px",
-      background: "#1b2635",
-      color: "white",
-      height: "100%",
-      padding: "1rem"
-    }}>
-      <h3>Navigation</h3>
-      <ul>
-        <li>Dashboard</li>
-        <li>Tools</li>
-        <li>Performance</li>
-        <li>News</li>
-        <li>Stocks</li>
-      </ul>
+    <div className="sidebar">
+
+      <div className="sidebar-main">
+
+        <NavLink to="/">Dashboard</NavLink>
+        <NavLink to="/tools">Tools</NavLink>
+        <NavLink to="/performance">Performance</NavLink>
+        <NavLink to="/news">News</NavLink>
+        <NavLink to="/stocks">Stocks</NavLink>
+
+      </div>
+
+      <div className="sidebar-bottom">
+
+        <NavLink to="/settings">Settings</NavLink>
+        <NavLink to="/about">About</NavLink>
+
+      </div>
+
     </div>
   );
 }

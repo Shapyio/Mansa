@@ -1,3 +1,4 @@
+/* --- Main Style --- */
 * {
   margin: 0;
   padding: 0;
@@ -7,4 +8,125 @@
 html, body, #root {
   height: 100%;
   font-family: system-ui, sans-serif;
+  overflow-x: hidden;
+}
+
+:root {
+  --bg: #ffffff;
+  --text: #000000;
+  --panel: #f2f2f2;
+}
+
+[data-theme="dark"] {
+  --bg: #1a1a1a;
+  --text: #ffffff;
+  --panel: #242424;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* --- Page Styles --- */
+.app {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+}
+
+.main {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+.dashboard {
+  flex: 1;
+  padding: 1rem;
+  overflow: auto;
+  max-width: 100%;
+}
+
+/* --- Modal Style --- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  z-index: 1000;
+}
+
+.modal-window {
+  background: var(--panel);
+  padding: 20px;
+  border-radius: 8px;
+  width: 600px;
+}
+
+.modal-close {
+  float: right;
+}
+
+/* --- Sidebar Style --- */
+.sidebar {
+  width: 220px;
+  background: var(--panel);
+  padding: 10px;
+
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar a {
+  padding: 10px;
+  text-decoration: none;
+  color: var(--text);
+}
+
+.sidebar-bottom {
+  margin-top: auto;
+}
+
+.sidebar {
+  width: 220px;
+  min-width: 220px;
+  max-width: 220px;
+
+  background: var(--panel);
+  padding: 10px;
+
+  display: flex;
+  flex-direction: column;
+
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.sidebar a {
+  display: block;
+
+  padding: 10px;
+
+  color: var(--text);
+  text-decoration: none;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --- Grid Smoothing --- */
+.react-grid-item {
+  transition: all 200ms ease;
+}
+
+.react-grid-item.react-grid-placeholder {
+  background: rgba(0,0,0,0.1);
+  border-radius: 6px;
 }
