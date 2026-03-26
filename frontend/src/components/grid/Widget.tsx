@@ -1,66 +1,36 @@
-/*
-  Base widget container
-  Layout only — no business logic
+import React, { ReactNode } from "react";
 
-  Serves as design pattern for other widgets
-*/
+type WidgetProps = {
+  children: ReactNode;
+};
 
-import React, { createContext, useContext, ReactNode } from "react";
-
-type WidgetContextType = {};
-
-const WidgetContext = createContext<WidgetContextType | null>(null);
-
-export default function Widget({ children }: { children: ReactNode }) {
+export default function Widget({ children }: WidgetProps) {
   return (
-    <WidgetContext.Provider value={{}}>
-      <div
-        style={{
-          background: "#ffffff",
-          borderRadius: "8px",
-          boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
-          height: "100%",
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden"
-        }}
-      >
-        {children}
-      </div>
-    </WidgetContext.Provider>
+    <div className="widget">
+      {children}
+    </div>
   );
 }
 
 function Header({ children }: { children: ReactNode }) {
   return (
-    <div
-      style={{
-        padding: "0.5rem",
-        background: "#f4f4f4",
-        cursor: "move",
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center"
-      }}
-    >
+    <div className="widget-header">
       {children}
     </div>
   );
 }
 
 function Controls({ children }: { children: ReactNode }) {
-  return <div style={{ display: "flex", gap: "0.5rem" }}>{children}</div>;
+  return (
+    <div className="widget-controls">
+      {children}
+    </div>
+  );
 }
 
 function Content({ children }: { children: ReactNode }) {
   return (
-    <div
-      style={{
-        padding: "1rem",
-        flex: 1,
-        overflowY: "auto"
-      }}
-    >
+    <div className="widget-content">
       {children}
     </div>
   );

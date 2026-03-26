@@ -27,22 +27,25 @@ export default function DashboardGrid() {
 
       rowHeight={80}
 
+      isDraggable={true}
+      isResizable={false}
+
       draggableHandle=".widget-header"
+      draggableCancel=".widget-controls"
 
       measureBeforeMount={false}
-      useCSSTransforms={true}
+      useCSSTransforms={false}
 
       compactType="vertical"
       preventCollision={false}
 
-      transformScale={1} // Fix widget drag offset
-      isBounded={true} // Fix widgets leaving screen view
+      isDroppable={false}
+      transformScale={1}
+      isBounded={true}
     >
-
       <div key="stocks"><StocksTableWidget /></div>
       <div key="tools"><ToolsWidget /></div>
       <div key="performance"><PerformanceWidget /></div>
-
     </ResponsiveGridLayout>
   );
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getStocks } from "../api/stocks";
+import PageHeader from "../components/layout/PageHeader";
 
 type Stock = {
   symbol: string;
@@ -8,7 +9,6 @@ type Stock = {
 };
 
 export default function Stocks() {
-
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -16,10 +16,8 @@ export default function Stocks() {
   async function loadStocks() {
     try {
       const data = await getStocks();
-
       if (Array.isArray(data)) setStocks(data);
       else if (data.stocks) setStocks(data.stocks);
-
     } catch (err) {
       console.error(err);
     } finally {
@@ -36,39 +34,50 @@ export default function Stocks() {
   );
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h1>Stocks</h1>
+    <>
+      <PageHeader title="Stocks" />
+      <div style={{ padding: "20px" }}>
+        <input
+          className="table-search"
+          placeholder="Search symbol..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          style={{ width: "300px", marginBottom: "10px" }}
+        />
 
-      <input
-        placeholder="Search symbol..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        style={{ margin: "10px 0", width: "300px" }}
-      />
+        {loading && <p style={{ color: "#6b7280" }}>Loading...</p>}
 
-      {loading && <p>Loading...</p>}
+        {!loading && (
+          <div className="table-wrapper">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Symbol</th>
+                  <th>Price</th>
+                  <th>Volume</th>
+                </tr>
+              </thead>
 
-      {!loading && (
-        <table style={{ width: "100%" }}>
-          <thead>
-            <tr>
-              <th align="left">Symbol</th>
-              <th align="left">Price</th>
-              <th align="left">Volume</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {filtered.map((s) => (
-              <tr key={s.symbol}>
-                <td>{s.symbol}</td>
-                <td>{s.last_price}</td>
-                <td>{s.volume}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </div>
+              <tbody>
+                {filtered.length === 0 && (
+                  <tr className="empty-row">
+                    <td colSpan={3}>No results found</td>
+                  </tr>
+                )}
+                {filtered.map((s) => (
+                  <tr key={s.symbol}>
+                    <td className="col-symbol">{s.symbol}</td>
+                    <td className="col-numeric">${s.last_price.toFixed(2)}</td>
+                    <td className="col-numeric">
+                      {s.volume != null ? s.volume.toLocaleString() : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </>
   );
 }

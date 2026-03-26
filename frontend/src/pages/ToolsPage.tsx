@@ -1,4 +1,5 @@
 import { runJob } from "../api/jobs";
+import PageHeader from "../components/layout/PageHeader"
 
 export default function Tools() {
 
@@ -13,8 +14,9 @@ export default function Tools() {
   }
 
   return (
+    <>
+    <PageHeader title="Tools" />
     <div style={{ padding: "20px" }}>
-      <h1>Tools</h1>
 
       <p>Run backend jobs for models and analysis.</p>
 
@@ -32,5 +34,6 @@ export default function Tools() {
         <p>Job results and logs will appear here.</p>
       </div>
     </div>
+    </>
   );
 }

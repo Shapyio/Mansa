@@ -1,7 +1,10 @@
+import PageHeader from "../components/layout/PageHeader"
+
 export default function About() {
   return (
+    <>
+    <PageHeader title="Stocks" />
     <div style={{ padding: "20px" }}>
-      <h1>About</h1>
 
       <p>
         This platform is a stock analysis and AI modeling dashboard designed to
@@ -28,5 +31,6 @@ export default function About() {
         <li>Docker containerized architecture</li>
       </ul>
     </div>
+    </>
   );
 }

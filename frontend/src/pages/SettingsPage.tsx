@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import PageHeader from "../components/layout/PageHeader"
 
 export default function Settings() {
 
@@ -15,8 +16,9 @@ export default function Settings() {
   }, [darkMode]);
 
   return (
+    <>
+    <PageHeader title="Settings" />
     <div style={{ padding: "20px" }}>
-      <h1>Settings</h1>
 
       <label>
         <input
@@ -28,5 +30,6 @@ export default function Settings() {
       </label>
 
     </div>
+    </>
   );
 }

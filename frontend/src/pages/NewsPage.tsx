@@ -1,3 +1,5 @@
+import PageHeader from "../components/layout/PageHeader"
+
 export default function News() {
 
   const mockNews = [
@@ -7,8 +9,9 @@ export default function News() {
   ];
 
   return (
+    <>
+    <PageHeader title="News" />
     <div style={{ padding: "20px" }}>
-      <h1>News Feed</h1>
 
       <p>Market related headlines and sentiment analysis will appear here.</p>
 
@@ -23,5 +26,6 @@ export default function News() {
         ))}
       </ul>
     </div>
+    </>
   );
 }

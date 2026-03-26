@@ -1,3 +1,5 @@
+import PageHeader from "../components/layout/PageHeader"
+
 export default function Performance() {
 
   const metrics = {
@@ -8,8 +10,9 @@ export default function Performance() {
   };
 
   return (
+    <>
+    <PageHeader title="Performance" />
     <div style={{ padding: "20px" }}>
-      <h1>Model Performance</h1>
 
       <p>Overview of model metrics and training results.</p>
 
@@ -24,5 +27,6 @@ export default function Performance() {
         <p>Performance charts will appear here.</p>
       </div>
     </div>
+    </>
   );
 }
