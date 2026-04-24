@@ -1,20 +1,24 @@
 import { Responsive } from "react-grid-layout";
 import { WidthProvider } from "react-grid-layout/legacy";
-
-import ToolsWidget from "../widgets/ToolsWidget";
-import PerformanceWidget from "../widgets/PerformanceWidget";
-import StocksTableWidget from "../widgets/StocksTableWidget";
+import { widgetRegistry } from "../widgets/Registry";
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
 export default function DashboardGrid() {
+  // Build layouts from the registry's defaultSize + a stored x/y position
+  const positions: Record<string, { x: number; y: number }> = {
+    tools:       { x: 0, y: 0 },
+    performance: { x: 3, y: 0 },
+    stocks:      { x: 9, y: 0 },
+  };
 
   const layouts = {
-    lg: [
-      { i: "tools", x: 0, y: 0, w: 3, h: 3 },
-      { i: "performance", x: 3, y: 0, w: 6, h: 4 },
-      { i: "stocks", x: 9, y: 0, w: 3, h: 4 }
-    ]
+    lg: Object.entries(widgetRegistry).map(([id, widget]) => ({
+      i: id,
+      x: positions[id]?.x ?? 0,
+      y: positions[id]?.y ?? 0,
+      ...widget.defaultSize,
+    })),
   };
 
   return (
@@ -24,28 +28,30 @@ export default function DashboardGrid() {
 
       breakpoints={{ lg: 1200, md: 996, sm: 768 }}
       cols={{ lg: 12, md: 10, sm: 6 }}
-
       rowHeight={80}
 
       isDraggable={true}
       isResizable={false}
 
       draggableHandle=".widget-header"
-      draggableCancel=".widget-controls"
+      draggableCancel=".widget-controls" // Make sure widget controls are clickable, not draggable
 
       measureBeforeMount={false}
       useCSSTransforms={false}
-
       compactType="vertical"
       preventCollision={false}
-
       isDroppable={false}
       transformScale={1}
       isBounded={true}
     >
-      <div key="stocks"><StocksTableWidget /></div>
-      <div key="tools"><ToolsWidget /></div>
-      <div key="performance"><PerformanceWidget /></div>
+      {Object.entries(widgetRegistry).map(([id, widget]) => {
+        const WidgetComponent = widget.component;
+        return (
+          <div key={id}>
+            <WidgetComponent />
+          </div>
+        );
+      })}
     </ResponsiveGridLayout>
   );
 }
