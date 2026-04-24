@@ -1,0 +1,23 @@
+name: Weekly Metadata Refresh
+
+on:
+  schedule:
+    - cron: '0 3 * * 0'   # 3am UTC Sunday
+  workflow_dispatch:
+
+jobs:
+  metadata:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - run: pip install -r requirements.txt
+      - name: Update company metadata
+        env:
+          FMP_API_KEY:       ${{ secrets.FMP_API_KEY }}
+          POSTGRES_HOST:     ${{ secrets.POSTGRES_HOST }}
+          POSTGRES_USER:     ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB:       ${{ secrets.POSTGRES_DB }}
+        run: python get_company_data.py

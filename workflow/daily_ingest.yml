@@ -1,0 +1,46 @@
+name: Daily Stock Ingest
+
+on:
+  schedule:
+    - cron: '0 2 * * 1-5'   # 2am UTC Mon–Fri (after market close)
+  workflow_dispatch:          # allow manual trigger
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Fetch OHLCV data
+        env:
+          ALPACA_API_KEY:    ${{ secrets.ALPACA_API_KEY }}
+          ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+          POSTGRES_HOST:     ${{ secrets.POSTGRES_HOST }}
+          POSTGRES_USER:     ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB:       ${{ secrets.POSTGRES_DB }}
+        run: python get_data.py --mode=daily   # refactor to accept --mode
+
+      - name: Compute features
+        env:
+          POSTGRES_HOST:     ${{ secrets.POSTGRES_HOST }}
+          POSTGRES_USER:     ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB:       ${{ secrets.POSTGRES_DB }}
+        run: python compute_features.py
+
+      - name: Check for gaps + enqueue jobs
+        run: python gap_check.py
+        env:
+          POSTGRES_HOST:     ${{ secrets.POSTGRES_HOST }}
+          POSTGRES_USER:     ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB:       ${{ secrets.POSTGRES_DB }}

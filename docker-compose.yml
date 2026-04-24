@@ -15,7 +15,7 @@ services:
     env_file:
       - ./secrets.env
     environment:
-      - DATABASE_URL=postgresql://postgres:password@db:5432/stockdb
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/stockdb
       - REDIS_HOST=redis
     depends_on:
       db:
@@ -44,7 +44,7 @@ services:
     env_file:
       - ./secrets.env
     environment:
-      - DATABASE_URL=postgresql://postgres:password@db:5432/stockdb
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/stockdb
       - REDIS_HOST=redis
     depends_on:
       - db
@@ -87,7 +87,7 @@ services:
     environment:
       POSTGRES_DB: stockdb
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./data/init-timescaledb.sql:/docker-entrypoint-initdb.d/init-timescaledb.sql
