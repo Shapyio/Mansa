@@ -18,4 +18,4 @@ app.add_middleware(
 
 app.include_router(stocks.router, prefix="/stocks", tags=["stocks"])
 app.include_router(models.router, prefix="/models", tags=["models"])
-# app.include_router(jobs.router, prefix="/jobs", tags=["jobs"]) No jobs available, so all jobs api commented out
+app.include_router(jobs.router, prefix="/jobs", tags=["jobs"]) 
