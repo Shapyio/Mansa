@@ -3,8 +3,8 @@ from pydantic import BaseModel
 from sqlalchemy import text
 from typing import Optional
 
-from app.core.db import engine
-from app.services.jobs_service import (
+from app.infrastructure.database import engine
+from app.services.job_service import (
     get_job_status_counts,
     get_recent_jobs,
     retry_failed_jobs,

@@ -17,9 +17,9 @@ RUN mkdir -p /app/logs
 
 # Copy backend code
 COPY app/ ./app
-COPY core/ ./core
 COPY jobs/ ./jobs
 COPY workers/ ./workers
+COPY scripts/ ./scripts
 
 ENV PYTHONUNBUFFERED=1
 

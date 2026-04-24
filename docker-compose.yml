@@ -1,6 +1,26 @@
 services:
 
   # ---------------------------
+  # Schema Migrations (runs once before api/worker)
+  # ---------------------------
+  migrate:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mansa_migrate
+    command: python scripts/migrate.py
+    volumes:
+      - ./backend/scripts:/app/scripts
+    env_file:
+      - ./secrets.env
+    environment:
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/stockdb
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  # ---------------------------
   # FastAPI API Service
   # ---------------------------
   api:
@@ -11,15 +31,14 @@ services:
     command: uvicorn app.api.main:app --host 0.0.0.0 --port 8000
     volumes:
       - ./backend/app:/app/app
-      - ./backend/core:/app/core
     env_file:
       - ./secrets.env
     environment:
       - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/stockdb
       - REDIS_HOST=redis
     depends_on:
-      db:
-        condition: service_healthy # ← waits for pg_isready to pass
+      migrate:
+        condition: service_completed_successfully
       redis:
         condition: service_started
     ports:
@@ -38,7 +57,6 @@ services:
     container_name: mansa_worker
     command: python workers/worker.py
     volumes:
-      - ./backend/core:/app/core
       - ./backend/workers:/app/workers
       - ./backend/jobs:/app/jobs
     env_file:
@@ -47,8 +65,10 @@ services:
       - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/stockdb
       - REDIS_HOST=redis
     depends_on:
-      - db
-      - redis
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
     dns:
       - 8.8.8.8
       - 1.1.1.1

@@ -1,7 +1,7 @@
 import json
 from sqlalchemy import text
-from app.core.db import engine
-from app.core.queue import get_queue
+from app.infrastructure.database import engine
+from app.infrastructure.queue import get_queue
 
 # Map job_type string → importable function path for RQ
 JOB_HANDLERS = {
@@ -92,7 +92,7 @@ def retry_failed_jobs() -> int:
 
 def get_queue_lengths() -> dict:
     """Get live Redis queue lengths (separate from Postgres audit counts)."""
-    from app.core.queue import queues
+    from app.infrastructure.queue import queues
     return {name: len(q) for name, q in queues.items()}
 
 
