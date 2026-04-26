@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Widget from "../grid/Widget";
 import {
-  runJob,
+  submitJob,
   getJobStatus,
   checkDataGaps,
   enqueueGaps,
@@ -35,14 +35,14 @@ export default function ToolsWidget() {
 
   const handleTrainModel = () =>
     run("train", async () => {
-      const res = await runJob("train_model", { symbol: "AAPL" });
-      setMessage(`Job queued: #${res.job_id}`);
+      const res = await submitJob("train_model", { symbol: "AAPL" });
+      setMessage(`Job queued: #${res.pg_job_id}`);
     });
 
   const handleComputeFeatures = () =>
     run("features", async () => {
-      const res = await runJob("compute_features", {});
-      setMessage(`Features job queued: #${res.job_id}`);
+      const res = await submitJob("compute_features", { company_id: 1 });
+      setMessage(`Features job queued: #${res.pg_job_id}`);
     });
 
   const handleCheckGaps = () =>

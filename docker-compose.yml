@@ -58,7 +58,7 @@ services:
     command: python workers/worker.py
     volumes:
       - ./backend/workers:/app/workers
-      - ./backend/jobs:/app/jobs
+      - ./backend/app:/app/app
     env_file:
       - ./secrets.env
     environment:

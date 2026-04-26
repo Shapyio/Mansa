@@ -35,8 +35,15 @@ MIGRATIONS = [
 
     ("enum: job_status", """
         DO $$ BEGIN
-            CREATE TYPE job_status AS ENUM ('pending', 'running', 'done', 'failed');
+            CREATE TYPE job_status AS ENUM ('pending', 'running', 'done', 'failed', 'paused');
         EXCEPTION WHEN duplicate_object THEN NULL;
+        END $$;
+    """),
+
+    ("enum: job_status add paused (idempotent)", """
+        DO $$ BEGIN
+            ALTER TYPE job_status ADD VALUE IF NOT EXISTS 'paused';
+        EXCEPTION WHEN others THEN NULL;
         END $$;
     """),
 
@@ -184,6 +191,38 @@ MIGRATIONS = [
         CREATE INDEX IF NOT EXISTS idx_jobs_pending
             ON jobs (priority, created_at)
             WHERE status = 'pending';
+    """),
+
+    ("column: jobs.tags", """
+        ALTER TABLE jobs
+            ADD COLUMN IF NOT EXISTS tags TEXT[] NOT NULL DEFAULT '{}';
+    """),
+
+    ("column: jobs.paused_at", """
+        ALTER TABLE jobs
+            ADD COLUMN IF NOT EXISTS paused_at TIMESTAMPTZ;
+    """),
+
+    ("column: jobs.rq_job_id", """
+        ALTER TABLE jobs
+            ADD COLUMN IF NOT EXISTS rq_job_id TEXT;
+    """),
+
+    ("index: idx_jobs_tags (GIN)", """
+        CREATE INDEX IF NOT EXISTS idx_jobs_tags
+            ON jobs USING GIN (tags);
+    """),
+
+    ("index: idx_jobs_status_created", """
+        CREATE INDEX IF NOT EXISTS idx_jobs_status_created
+            ON jobs (status, created_at DESC);
+    """),
+
+    ("enum: job_type add train_model (idempotent)", """
+        DO $$ BEGIN
+            ALTER TYPE job_type ADD VALUE IF NOT EXISTS 'train_model';
+        EXCEPTION WHEN others THEN NULL;
+        END $$;
     """),
 ]
 

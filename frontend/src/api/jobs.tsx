@@ -1,59 +1,91 @@
-export async function runJob(tool: string, params: any) {
-  const res = await fetch(`/api/jobs/${tool}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(params)
-  });
+export type JobStatus = "pending" | "running" | "done" | "failed" | "paused";
 
-  if (!res.ok) {
-    throw new Error("Job failed");
-  }
-
-  return res.json();
+export interface JobRow {
+  id: number;
+  job_type: string;
+  status: JobStatus;
+  payload: Record<string, unknown>;
+  priority: number;
+  tags: string[];
+  attempts: number;
+  max_attempts: number;
+  error_msg: string | null;
+  rq_job_id: string | null;
+  created_at: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+  paused_at: string | null;
 }
 
-export async function getJobStatus() {
-  const res = await fetch("/api/jobs/status");
-  if (!res.ok) throw new Error("Failed to fetch job status");
-  return res.json();
+export interface JobStatusResponse {
+  counts: Partial<Record<JobStatus, number>>;
+  recent: JobRow[];
+  redis_queues: Record<string, number>;
+  tags: string[];
+  job_types: string[];
 }
 
-export async function checkDataGaps() {
-  const res = await fetch("/api/jobs/gaps");
-  if (!res.ok) throw new Error("Failed to check data gaps");
-  return res.json();
+async function jfetch<T>(url: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(url, init);
+  if (!res.ok) throw new Error(`${init?.method ?? "GET"} ${url} failed: ${res.status}`);
+  return res.json() as Promise<T>;
 }
 
-export async function enqueueGaps(gaps: any[]) {
-  const res = await fetch("/api/jobs/gaps/enqueue", {
+export function getJobStatus(opts: { tags?: string[]; status?: JobStatus; limit?: number } = {}) {
+  const params = new URLSearchParams();
+  if (opts.limit) params.set("limit", String(opts.limit));
+  if (opts.status) params.set("status", opts.status);
+  (opts.tags ?? []).forEach((t) => params.append("tag", t));
+  const qs = params.toString();
+  return jfetch<JobStatusResponse>(`/api/jobs/status${qs ? `?${qs}` : ""}`);
+}
+
+export const checkDataGaps = () =>
+  jfetch<{ count: number; gaps: any[] }>("/api/jobs/gaps");
+
+export const enqueueGaps = (gaps: any[]) =>
+  jfetch<{ enqueued: number }>("/api/jobs/gaps/enqueue", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ gaps }),
   });
-  if (!res.ok) throw new Error("Failed to enqueue gaps");
-  return res.json();
-}
 
-export async function checkStaleMetadata() {
-  const res = await fetch("/api/jobs/metadata/stale");
-  if (!res.ok) throw new Error("Failed to check stale metadata");
-  return res.json();
-}
+export const checkStaleMetadata = () =>
+  jfetch<{ count: number; companies: any[] }>("/api/jobs/metadata/stale");
 
-export async function enqueueMetadataUpdates(company_ids: number[]) {
-  const res = await fetch("/api/jobs/metadata/enqueue", {
+export const enqueueMetadataUpdates = (company_ids: number[]) =>
+  jfetch<{ enqueued: number }>("/api/jobs/metadata/enqueue", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ company_ids }),
   });
-  if (!res.ok) throw new Error("Failed to enqueue metadata updates");
-  return res.json();
-}
 
-export async function retryFailedJobs() {
-  const res = await fetch("/api/jobs/retry-failed", { method: "POST" });
-  if (!res.ok) throw new Error("Failed to retry failed jobs");
-  return res.json();
-}
+export const retryFailedJobs = () =>
+  jfetch<{ retried: number }>("/api/jobs/retry-failed", { method: "POST" });
+
+export const submitJob = (
+  job_type: string,
+  payload: Record<string, unknown> = {},
+  opts: { priority?: number; tags?: string[] } = {},
+) =>
+  jfetch<{ pg_job_id: number; rq_job_id: string }>("/api/jobs/submit", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ job_type, payload, priority: opts.priority ?? 5, tags: opts.tags }),
+  });
+
+export const pauseJob = (id: number) =>
+  jfetch<{ paused: number }>(`/api/jobs/${id}/pause`, { method: "POST" });
+
+export const resumeJob = (id: number) =>
+  jfetch<{ pg_job_id: number; rq_job_id: string }>(`/api/jobs/${id}/resume`, { method: "POST" });
+
+export const pauseAll = (reason = "global pause") =>
+  jfetch<{ paused: number }>("/api/jobs/pause-all", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ reason }),
+  });
+
+export const resumeAll = () =>
+  jfetch<{ resumed: number }>("/api/jobs/resume-all", { method: "POST" });
