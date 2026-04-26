@@ -218,6 +218,12 @@ MIGRATIONS = [
             ON jobs (status, created_at DESC);
     """),
 
+    ("column: stock_data.trade_count + vwap", """
+        ALTER TABLE stock_data
+            ADD COLUMN IF NOT EXISTS trade_count BIGINT,
+            ADD COLUMN IF NOT EXISTS vwap        NUMERIC;
+    """),
+
     ("enum: job_type add train_model (idempotent)", """
         DO $$ BEGIN
             ALTER TYPE job_type ADD VALUE IF NOT EXISTS 'train_model';
