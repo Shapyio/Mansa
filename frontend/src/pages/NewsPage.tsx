@@ -1,31 +1,36 @@
-import PageHeader from "../components/layout/PageHeader"
+import PageHeader from "../components/layout/PageHeader";
+import Badge from "../components/ui/Badge";
+
+const mockNews = [
+  { title: "Tech stocks rally on AI demand",       source: "Reuters",   tone: "up",   time: "2h ago" },
+  { title: "Federal Reserve signals rate pause",   source: "Bloomberg", tone: "warn", time: "5h ago" },
+  { title: "Nvidia leads semiconductor gains",     source: "CNBC",      tone: "up",   time: "1d ago" },
+] as const;
 
 export default function News() {
-
-  const mockNews = [
-    { title: "Tech stocks rally on AI demand", source: "Reuters" },
-    { title: "Federal Reserve signals rate pause", source: "Bloomberg" },
-    { title: "Nvidia leads semiconductor gains", source: "CNBC" }
-  ];
-
   return (
     <>
-    <PageHeader title="News" />
-    <div style={{ padding: "20px" }}>
-
-      <p>Market related headlines and sentiment analysis will appear here.</p>
-
-      <ul>
+      <PageHeader title="News" subtitle="Headlines + sentiment (mock data)" />
+      <div className="card" style={{ overflow: "hidden" }}>
         {mockNews.map((n, i) => (
-          <li key={i} style={{ marginBottom: "10px" }}>
-            <strong>{n.title}</strong>
-            <div style={{ fontSize: "0.9rem", opacity: 0.7 }}>
-              {n.source}
+          <div
+            key={i}
+            style={{
+              display: "flex", alignItems: "center", gap: "var(--s-4)",
+              padding: "var(--s-4) var(--s-5)",
+              borderBottom: i < mockNews.length - 1 ? "1px solid var(--line)" : "none",
+            }}
+          >
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: "var(--fs-md)", fontWeight: 500, marginBottom: 4 }}>{n.title}</div>
+              <div style={{ fontSize: "var(--fs-xs)", color: "var(--text-muted)" }}>
+                {n.source} · {n.time}
+              </div>
             </div>
-          </li>
+            <Badge tone={n.tone}>{n.tone}</Badge>
+          </div>
         ))}
-      </ul>
-    </div>
+      </div>
     </>
   );
 }

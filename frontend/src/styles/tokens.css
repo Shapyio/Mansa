@@ -1,0 +1,99 @@
+/* Design tokens — single source of truth.
+   All UI primitives reference these vars; never hardcode a color.        */
+
+:root,
+[data-theme="dark"] {
+  /* Neutrals (slate/zinc, dark default) */
+  --bg-0:        #08090c;     /* page background */
+  --bg-1:        #0f1115;     /* surface 1 (cards) */
+  --bg-2:        #161a21;     /* surface 2 (hover, inputs) */
+  --bg-3:        #1f242d;     /* surface 3 (raised) */
+
+  --line:        rgba(255,255,255,0.06);
+  --line-strong: rgba(255,255,255,0.12);
+
+  --text:        #e7eaf0;
+  --text-muted:  #8a93a4;
+  --text-faint:  #565d6d;
+
+  /* Accent — emerald (used for primary actions, charts up) */
+  --accent:      #10b981;
+  --accent-soft: rgba(16,185,129,0.12);
+  --accent-line: rgba(16,185,129,0.30);
+  --accent-glow: 0 0 0 3px rgba(16,185,129,0.18);
+
+  /* Semantic colors */
+  --up:          #10b981;
+  --down:        #f43f5e;
+  --warn:        #f59e0b;
+  --info:        #6366f1;
+
+  /* Status pills (matches job statuses) */
+  --st-pending:  #94a3b8;
+  --st-running:  #38bdf8;
+  --st-done:     #10b981;
+  --st-failed:   #f43f5e;
+  --st-paused:   #f59e0b;
+
+  /* Radii */
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 18px;
+
+  /* Spacing scale */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --s-10: 40px;
+
+  /* Type */
+  --font: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Inter",
+          "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-md: 13px;
+  --fs-lg: 15px;
+  --fs-xl: 18px;
+  --fs-2xl: 22px;
+  --fs-3xl: 28px;
+
+  /* Effects */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.35);
+  --shadow-md: 0 6px 24px -8px rgba(0,0,0,0.55);
+  --shadow-lg: 0 24px 64px -20px rgba(0,0,0,0.7);
+
+  --ease:     cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-fast: 120ms;
+  --dur:      200ms;
+  --dur-slow: 320ms;
+
+  /* Layout */
+  --sidebar-w: 220px;
+  --sidebar-w-collapsed: 64px;
+  --topbar-h: 56px;
+}
+
+[data-theme="light"] {
+  --bg-0:        #f7f8fa;
+  --bg-1:        #ffffff;
+  --bg-2:        #f1f3f7;
+  --bg-3:        #e7eaf0;
+
+  --line:        rgba(15,17,21,0.08);
+  --line-strong: rgba(15,17,21,0.16);
+
+  --text:        #0f1115;
+  --text-muted:  #5a6275;
+  --text-faint:  #9aa1b1;
+
+  --shadow-sm:   0 1px 2px rgba(15,17,21,0.06);
+  --shadow-md:   0 6px 24px -8px rgba(15,17,21,0.18);
+  --shadow-lg:   0 24px 64px -20px rgba(15,17,21,0.25);
+}
