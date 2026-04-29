@@ -12,7 +12,7 @@ services:
     volumes:
       - ./backend/scripts:/app/scripts
     env_file:
-      - ./secrets.env
+      - ./.env
     environment:
       - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/stockdb
     depends_on:
@@ -32,10 +32,15 @@ services:
     volumes:
       - ./backend/app:/app/app
     env_file:
-      - ./secrets.env
+      - ./.env
     environment:
       - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/stockdb
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=stockdb
+      - POSTGRES_USER=postgres
       - REDIS_HOST=redis
+      - REDIS_PORT=6379
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -60,10 +65,15 @@ services:
       - ./backend/workers:/app/workers
       - ./backend/app:/app/app
     env_file:
-      - ./secrets.env
+      - ./.env
     environment:
       - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/stockdb
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=stockdb
+      - POSTGRES_USER=postgres
       - REDIS_HOST=redis
+      - REDIS_PORT=6379
     depends_on:
       migrate:
         condition: service_completed_successfully

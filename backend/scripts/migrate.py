@@ -16,10 +16,22 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://postgres:password@db:5432/stockdb",
-)
+def _build_database_url() -> str:
+    explicit = os.getenv("DATABASE_URL")
+    if explicit:
+        return explicit
+    user = os.getenv("POSTGRES_USER", "postgres")
+    pw   = os.getenv("POSTGRES_PASSWORD")
+    host = os.getenv("POSTGRES_HOST", "db")
+    port = os.getenv("POSTGRES_PORT", "5432")
+    db   = os.getenv("POSTGRES_DB", "stockdb")
+    if not pw:
+        print("ERROR: Set DATABASE_URL or POSTGRES_PASSWORD before running migrate.", file=sys.stderr)
+        sys.exit(1)
+    return f"postgresql://{user}:{pw}@{host}:{port}/{db}"
+
+
+DATABASE_URL = _build_database_url()
 
 
 # ---------------------------------------------------------------------------

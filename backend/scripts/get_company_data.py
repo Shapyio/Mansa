@@ -1,18 +1,30 @@
-import requests
-import psycopg2
-from psycopg2.extras import RealDictCursor
-from datetime import datetime
-import time
 import os
+import sys
+import time
+from datetime import datetime
+
+import psycopg2
+import requests
+from dotenv import load_dotenv
+from psycopg2.extras import RealDictCursor
+
+load_dotenv()
 
 API_KEY = os.getenv("FMP_API_KEY")
 
-# FIXME: I don't like hardcoding DB info
+# All values come from env (.env / secrets.env / docker-compose).
+# We refuse to start without a real password instead of falling back silently.
+_PG_PASSWORD = os.getenv("POSTGRES_PASSWORD")
+if not _PG_PASSWORD:
+    print("ERROR: POSTGRES_PASSWORD is not set (check secrets.env).", file=sys.stderr)
+    sys.exit(1)
+
 DB_CONFIG = {
-    "host": "db", 
-    "database": "stockdb",
-    "user": "postgres",
-    "password": "password"
+    "host":     os.getenv("POSTGRES_HOST", "db"),
+    "port":     int(os.getenv("POSTGRES_PORT", "5432")),
+    "database": os.getenv("POSTGRES_DB",   "stockdb"),
+    "user":     os.getenv("POSTGRES_USER", "postgres"),
+    "password": _PG_PASSWORD,
 }
 
 
