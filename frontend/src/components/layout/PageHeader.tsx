@@ -1,20 +1,19 @@
-type Props = {
-  title: string
-  actions?: React.ReactNode
-}
+import type { ReactNode } from "react";
 
-export default function PageHeader({ title, actions }: Props) {
+type Props = {
+  title: string;
+  subtitle?: string;
+  actions?: ReactNode;
+};
+
+export default function PageHeader({ title, subtitle, actions }: Props) {
   return (
     <div className="page-header">
-
-      <div className="page-title">
-        {title}
+      <div>
+        <div className="page-header__title">{title}</div>
+        {subtitle && <div className="page-header__sub">{subtitle}</div>}
       </div>
-
-      <div className="page-actions">
-        {actions}
-      </div>
-
+      {actions && <div className="page-header__actions">{actions}</div>}
     </div>
-  )
+  );
 }

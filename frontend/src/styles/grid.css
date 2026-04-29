@@ -1,0 +1,48 @@
+/* Smooth, modern look for react-grid-layout */
+@import "react-grid-layout/css/styles.css";
+@import "react-resizable/css/styles.css";
+
+.react-grid-layout { position: relative; transition: height var(--dur) var(--ease); }
+.react-grid-item {
+  transition: transform var(--dur-slow) var(--ease),
+              box-shadow var(--dur) var(--ease);
+}
+.react-grid-item.cssTransforms { transition-property: transform; }
+.react-grid-item.resizing      { z-index: 3; opacity: 0.95; }
+.react-grid-item.react-draggable-dragging {
+  z-index: 4;
+  box-shadow: var(--shadow-lg);
+  cursor: grabbing !important;
+}
+.react-grid-item.react-grid-placeholder {
+  background: var(--accent-soft) !important;
+  border: 1px dashed var(--accent-line);
+  border-radius: var(--r-lg);
+  opacity: 1 !important;
+  transition: all var(--dur) var(--ease);
+}
+
+/* Resize handle — visible only in edit mode */
+.react-resizable-handle {
+  background-image: none !important;
+  width: 14px !important; height: 14px !important;
+  right: 4px !important; bottom: 4px !important;
+}
+.react-resizable-handle::after {
+  content: ""; position: absolute; right: 3px; bottom: 3px;
+  width: 8px; height: 8px;
+  border-right: 2px solid var(--text-faint);
+  border-bottom: 2px solid var(--text-faint);
+  border-bottom-right-radius: 2px;
+  transition: border-color var(--dur-fast);
+}
+.dashboard-grid:not(.dashboard-grid--edit) .react-resizable-handle { display: none; }
+.react-resizable-handle:hover::after { border-color: var(--accent); }
+
+/* Edit-mode visual cue */
+.dashboard-grid--edit .widget {
+  outline: 1px dashed var(--line-strong);
+  outline-offset: -1px;
+}
+.dashboard-grid--edit .widget__head { cursor: grab; }
+.dashboard-grid--edit .widget__head:active { cursor: grabbing; }

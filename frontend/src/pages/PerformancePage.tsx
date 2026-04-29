@@ -1,32 +1,32 @@
-import PageHeader from "../components/layout/PageHeader"
+import PageHeader from "../components/layout/PageHeader";
+import Stat from "../components/ui/Stat";
+import { IconPerformance } from "../components/ui/Icons";
 
 export default function Performance() {
-
-  const metrics = {
-    accuracy: "72%",
-    sharpe: "1.45",
-    drawdown: "-8%",
-    trades: 142
-  };
+  const m = { accuracy: "—", sharpe: "—", drawdown: "—", trades: 0 };
 
   return (
     <>
-    <PageHeader title="Performance" />
-    <div style={{ padding: "20px" }}>
+      <PageHeader title="Performance" subtitle="Model accuracy, returns, and risk metrics" />
 
-      <p>Overview of model metrics and training results.</p>
-
-      <div style={{ marginTop: "20px" }}>
-        <p><b>Accuracy:</b> {metrics.accuracy}</p>
-        <p><b>Sharpe Ratio:</b> {metrics.sharpe}</p>
-        <p><b>Max Drawdown:</b> {metrics.drawdown}</p>
-        <p><b>Total Trades:</b> {metrics.trades}</p>
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+        gap: "var(--s-3)",
+        marginBottom: "var(--s-5)",
+      }}>
+        <Stat label="Accuracy"     value={m.accuracy} icon={<IconPerformance />} />
+        <Stat label="Sharpe Ratio" value={m.sharpe} />
+        <Stat label="Max Drawdown" value={m.drawdown} />
+        <Stat label="Total Trades" value={m.trades} />
       </div>
 
-      <div style={{ marginTop: "30px" }}>
-        <p>Performance charts will appear here.</p>
+      <div className="card card--padded" style={{
+        textAlign: "center", padding: "var(--s-10)",
+        color: "var(--text-faint)", fontSize: "var(--fs-sm)",
+      }}>
+        Equity curve and per-symbol breakdown will appear here once a model has been trained.
       </div>
-    </div>
     </>
   );
 }

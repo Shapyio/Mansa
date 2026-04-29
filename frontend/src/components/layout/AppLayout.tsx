@@ -1,26 +1,18 @@
-import { useState } from "react";
 import { Outlet } from "react-router-dom";
-
-import Banner from "./Banner";
-import TopBar from "./TopBar";
+import { useLocalStorage } from "../../hooks/useLocalStorage";
 import Sidebar from "./Sidebar";
+import TopBar from "./TopBar";
 
 export default function AppLayout() {
-
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [collapsed, setCollapsed] = useLocalStorage<boolean>("sidebar.collapsed", false);
 
   return (
     <div className="app">
-      <Banner />
-      <TopBar toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
-
-      <div className="main">
-        <Sidebar isOpen={sidebarOpen} />
-
-        <div className="dashboard">
-          <Outlet />
-        </div>
-      </div>
+      <Sidebar collapsed={collapsed} />
+      <TopBar onToggleSidebar={() => setCollapsed(!collapsed)} />
+      <main className="app__main">
+        <Outlet />
+      </main>
     </div>
   );
 }
