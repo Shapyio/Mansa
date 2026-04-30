@@ -1,0 +1,43 @@
+name: Daily Scheduler Tick
+
+# Hits the running API once per day. The API enqueues rate-capped jobs into
+# RQ; the worker container does the actual work. All quotas / business logic
+# live in app/services/scheduler_service.py.
+
+on:
+  schedule:
+    - cron: '0 6 * * *'   # 06:00 UTC daily — gives FMP/Alpaca quotas time to reset
+  workflow_dispatch:       # manual trigger button
+    inputs:
+      metadata_budget:
+        description: "Override FMP daily budget"
+        required: false
+      gap_budget:
+        description: "Override Alpaca daily budget"
+        required: false
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    steps:
+      - name: POST /jobs/tick
+        env:
+          API_URL:          ${{ secrets.MANSA_API_URL }}     # e.g. https://api.example.com
+          API_TOKEN:        ${{ secrets.MANSA_API_TOKEN }}   # optional, if you add auth
+          METADATA_BUDGET:  ${{ inputs.metadata_budget }}
+          GAP_BUDGET:       ${{ inputs.gap_budget }}
+        run: |
+          set -e
+          BODY='{}'
+          if [ -n "$METADATA_BUDGET" ] || [ -n "$GAP_BUDGET" ]; then
+            BODY=$(jq -n \
+              --argjson m "${METADATA_BUDGET:-null}" \
+              --argjson g "${GAP_BUDGET:-null}" \
+              '{metadata_budget: $m, gap_budget: $g}')
+          fi
+          echo "Posting: $BODY"
+          curl -fsS -X POST "$API_URL/jobs/tick" \
+            -H "Content-Type: application/json" \
+            ${API_TOKEN:+-H "Authorization: Bearer $API_TOKEN"} \
+            -d "$BODY" | tee /tmp/resp.json
+          jq . /tmp/resp.json

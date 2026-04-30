@@ -8,7 +8,7 @@ import {
   type JobRow, type JobStatus, type JobStatusResponse,
   checkDataGaps, checkStaleMetadata, enqueueGaps, enqueueMetadataUpdates,
   getJobStatus, pauseAll, pauseJob, resumeAll, resumeJob,
-  retryFailedJobs, submitJob,
+  retryFailedJobs, runTick, submitJob,
 } from "../api/jobs";
 
 const STATUSES: JobStatus[] = ["pending", "running", "done", "failed", "paused"];
@@ -112,6 +112,11 @@ export default function Tools() {
             `Retried ${(await retryFailedJobs()).retried}`)}>
             {busy === "retry" ? "…" : "Retry Failed"}
           </Button>
+
+          <Button variant="primary" disabled={!!busy} onClick={() => run("tick", async () => {
+            const t = await runTick();
+            return `Tick: resumed ${t.resumed} · enqueued ${t.metadata_enqueued} metadata · ${t.gaps_enqueued} gaps`;
+          })}>{busy === "tick" ? "…" : "Run Scheduler Tick"}</Button>
 
           <span style={{ marginLeft: "auto", display: "flex", gap: "var(--s-2)" }}>
             <Button variant="danger" disabled={!!busy} icon={<IconPause />} onClick={() => run("pauseAll", async () =>

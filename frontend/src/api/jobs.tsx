@@ -89,3 +89,18 @@ export const pauseAll = (reason = "global pause") =>
 
 export const resumeAll = () =>
   jfetch<{ resumed: number }>("/api/jobs/resume-all", { method: "POST" });
+
+export interface TickResult {
+  metadata_budget: number;
+  gap_budget: number;
+  resumed: number;
+  metadata_enqueued: number;
+  gaps_enqueued: number;
+}
+
+export const runTick = (opts: { metadata_budget?: number; gap_budget?: number } = {}) =>
+  jfetch<TickResult>("/api/jobs/tick", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(opts),
+  });

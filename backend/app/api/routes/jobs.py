@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from sqlalchemy import text
 
 from app.infrastructure.database import engine
+from app.services.scheduler_service import daily_tick
 from app.services.job_service import (
     JOB_HANDLERS,
     enqueue_gap_fills,
@@ -166,3 +167,29 @@ def pause_all(body: PauseAllRequest = PauseAllRequest()):
 @router.post("/resume-all")
 def resume_all():
     return {"resumed": resume_all_paused()}
+
+
+# ---------------------------------------------------------------------------
+# Scheduler tick — single entrypoint hit by external cron OR the UI.
+# ---------------------------------------------------------------------------
+
+class TickRequest(BaseModel):
+    metadata_budget: Optional[int] = None  # default: env FMP_DAILY_BUDGET (200)
+    gap_budget:      Optional[int] = None  # default: env ALPACA_DAILY_BUDGET (1000)
+    stale_days:      int           = 90
+    auto_resume:     bool          = True
+
+
+@router.post("/tick")
+def tick(body: TickRequest = TickRequest()):
+    """
+    Run one scheduler pass: resume paused jobs, then enqueue up to
+    {metadata_budget} stale-metadata jobs and {gap_budget} gap-fill jobs.
+    Idempotent — safe to call any number of times per day.
+    """
+    return daily_tick(
+        metadata_budget=body.metadata_budget,
+        gap_budget=body.gap_budget,
+        stale_days=body.stale_days,
+        auto_resume=body.auto_resume,
+    )
