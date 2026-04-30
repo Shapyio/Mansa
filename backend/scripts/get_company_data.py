@@ -1,134 +1,76 @@
-import os
+"""
+CLI wrapper around app.services.metadata_service.
+
+Usage:
+    # Refresh one symbol
+    python scripts/get_company_data.py AAPL
+
+    # Refresh every company missing a name (or whose metadata is older than N days)
+    python scripts/get_company_data.py --stale --days 90
+
+The single-symbol path is also exposed via the `update_metadata` RQ job
+(see app/jobs/update_metadata.py); the --stale path is here for one-off
+backfills before the scheduler is in place.
+"""
+
+import argparse
+import logging
 import sys
 import time
-from datetime import datetime
+from pathlib import Path
 
-import psycopg2
-import requests
+# Make `app.*` importable when run as a script
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 from dotenv import load_dotenv
-from psycopg2.extras import RealDictCursor
+from sqlalchemy import text
 
 load_dotenv()
 
-API_KEY = os.getenv("FMP_API_KEY")
-
-# All values come from env (.env / secrets.env / docker-compose).
-# We refuse to start without a real password instead of falling back silently.
-_PG_PASSWORD = os.getenv("POSTGRES_PASSWORD")
-if not _PG_PASSWORD:
-    print("ERROR: POSTGRES_PASSWORD is not set (check secrets.env).", file=sys.stderr)
-    sys.exit(1)
-
-DB_CONFIG = {
-    "host":     os.getenv("POSTGRES_HOST", "db"),
-    "port":     int(os.getenv("POSTGRES_PORT", "5432")),
-    "database": os.getenv("POSTGRES_DB",   "stockdb"),
-    "user":     os.getenv("POSTGRES_USER", "postgres"),
-    "password": _PG_PASSWORD,
-}
+from app.infrastructure.database import engine                      # noqa: E402
+from app.services.metadata_service import upsert_company_metadata   # noqa: E402
 
 
-def get_company_data(symbol):
-    url = f"https://financialmodelingprep.com/stable/profile?symbol={symbol}&apikey={API_KEY}"
-    response = requests.get(url, timeout=10) # Wait time out to try to avoid call limits
-
-    # Error throw
-    if response.status_code != 200:
-        print(f"HTTP error {response.status_code} for {symbol}")
-        return None
-
-    data = response.json()
-
-    if not data:
-        return None
-
-    # Only keep NASDAQ listings
-    for item in data:
-            return item
-
-    return None
+def _stale_symbols(days: int) -> list[str]:
+    with engine.connect() as conn:
+        rows = conn.execute(text(f"""
+            SELECT symbol FROM companies
+            WHERE name IS NULL OR name = '' OR name = symbol
+               OR metadata_updated_at IS NULL
+               OR metadata_updated_at < now() - interval '{int(days)} days'
+            ORDER BY metadata_updated_at NULLS FIRST, symbol
+        """)).fetchall()
+    return [r.symbol for r in rows]
 
 
-def get_or_create_id(cursor, table, name):
-    cursor.execute(
-        f"""
-        INSERT INTO {table} (name)
-        VALUES (%s)
-        ON CONFLICT (name)
-        DO UPDATE SET name = EXCLUDED.name
-        RETURNING id;
-        """,
-        (name,)
-    )
-    return cursor.fetchone()["id"]
+def main() -> None:
+    p = argparse.ArgumentParser()
+    p.add_argument("symbol", nargs="?", help="Single symbol to refresh")
+    p.add_argument("--stale", action="store_true",
+                   help="Refresh every company with missing or old metadata")
+    p.add_argument("--days", type=int, default=90,
+                   help="Staleness threshold in days (used with --stale)")
+    p.add_argument("--sleep", type=float, default=0.25,
+                   help="Seconds to sleep between calls (rate-limit cushion)")
+    args = p.parse_args()
 
+    logging.basicConfig(level=logging.INFO,
+                        format="%(asctime)s %(levelname)s %(message)s")
 
-def upsert_company(cursor, company):
-    industry_id = get_or_create_id(cursor, "industries", company.get("industry"))
-    sector_id = get_or_create_id(cursor, "sectors", company.get("sector"))
+    if args.stale:
+        symbols = _stale_symbols(args.days)
+        print(f"Refreshing {len(symbols)} companies (>{args.days}d stale or missing)")
+        for sym in symbols:
+            try:
+                print(upsert_company_metadata(sym))
+            except Exception as e:
+                print(f"  {sym}: {e}", file=sys.stderr)
+            time.sleep(args.sleep)
+        return
 
-    cursor.execute(
-        """
-        INSERT INTO companies (
-            symbol,
-            name,
-            industry_id,
-            sector_id,
-            country,
-            state,
-            city,
-            exchange
-        )
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-        ON CONFLICT (symbol)
-        DO UPDATE SET
-            name = EXCLUDED.name,
-            industry_id = EXCLUDED.industry_id,
-            sector_id = EXCLUDED.sector_id,
-            country = EXCLUDED.country,
-            state = EXCLUDED.state,
-            city = EXCLUDED.city,
-            exchange = EXCLUDED.exchange;
-        """,
-        (
-            company.get("symbol"),
-            company.get("companyName"),
-            industry_id,
-            sector_id,
-            company.get("country"),
-            company.get("state"),
-            company.get("city"),
-            company.get("exchange")
-        )
-    )
-
-def main():
-    conn = psycopg2.connect(**DB_CONFIG)
-    conn.autocommit = False
-
-    with conn.cursor(cursor_factory=RealDictCursor) as cursor:
-
-        # Pull all tickers currently in your database
-        cursor.execute("SELECT symbol FROM companies WHERE name is NULL OR name = '';")
-        symbols = [row["symbol"] for row in cursor.fetchall()]
-
-        print(f"Updating metadata for {len(symbols)} companies")
-
-        for symbol in symbols:
-            print(f"Processing {symbol}")
-
-            company_data = get_company_data(symbol)
-
-            if not company_data:
-                print(f"No data found for {symbol}")
-                continue
-
-            upsert_company(cursor, company_data)
-            conn.commit()
-
-            time.sleep(0.25)  # prevent rate limit
-
-    conn.close()
+    if not args.symbol:
+        p.error("Pass a symbol, or use --stale to refresh all stale companies")
+    print(upsert_company_metadata(args.symbol))
 
 
 if __name__ == "__main__":

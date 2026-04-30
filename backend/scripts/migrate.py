@@ -230,6 +230,75 @@ MIGRATIONS = [
             ON jobs (status, created_at DESC);
     """),
 
+    ("column: company_metadata drop legacy 'date' column", """
+        -- Older schema used a NOT NULL `date` column instead of
+        -- `metadata_updated_at`. Migrate values across, then drop it.
+        DO $$
+        BEGIN
+            IF EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'company_metadata' AND column_name = 'date'
+            ) THEN
+                ALTER TABLE company_metadata
+                    ADD COLUMN IF NOT EXISTS metadata_updated_at DATE;
+
+                UPDATE company_metadata
+                   SET metadata_updated_at = COALESCE(metadata_updated_at, date);
+
+                ALTER TABLE company_metadata DROP COLUMN date;
+            END IF;
+        END $$;
+    """),
+
+    ("column: company_metadata schema repair", """
+        -- The CREATE TABLE block above is a no-op if company_metadata already
+        -- exists from an earlier schema. Apply each column additively so old
+        -- DBs catch up.
+        ALTER TABLE company_metadata
+            ADD COLUMN IF NOT EXISTS metadata_updated_at DATE,
+            ADD COLUMN IF NOT EXISTS market_cap     BIGINT,
+            ADD COLUMN IF NOT EXISTS pe_ratio       NUMERIC,
+            ADD COLUMN IF NOT EXISTS dividend_yield NUMERIC,
+            ADD COLUMN IF NOT EXISTS employees      INTEGER;
+
+        UPDATE company_metadata SET metadata_updated_at = CURRENT_DATE
+            WHERE metadata_updated_at IS NULL;
+
+        ALTER TABLE company_metadata
+            ALTER COLUMN metadata_updated_at SET NOT NULL;
+    """),
+
+    ("pk: company_metadata (company_id, metadata_updated_at)", """
+        DO $$
+        DECLARE
+            pk_cols text;
+        BEGIN
+            SELECT string_agg(a.attname, ',' ORDER BY array_position(c.conkey, a.attnum))
+              INTO pk_cols
+              FROM pg_constraint c
+              JOIN pg_class      t ON t.oid = c.conrelid
+              JOIN pg_attribute  a ON a.attrelid = t.oid AND a.attnum = ANY(c.conkey)
+             WHERE t.relname = 'company_metadata' AND c.contype = 'p';
+
+            IF pk_cols IS DISTINCT FROM 'company_id,metadata_updated_at' THEN
+                ALTER TABLE company_metadata DROP CONSTRAINT IF EXISTS company_metadata_pkey;
+                ALTER TABLE company_metadata
+                    ADD PRIMARY KEY (company_id, metadata_updated_at);
+            END IF;
+        END $$;
+    """),
+
+    ("column: companies.metadata_updated_at + exchange", """
+        ALTER TABLE companies
+            ADD COLUMN IF NOT EXISTS metadata_updated_at TIMESTAMPTZ,
+            ADD COLUMN IF NOT EXISTS exchange            VARCHAR(20);
+    """),
+
+    ("index: idx_companies_metadata_age", """
+        CREATE INDEX IF NOT EXISTS idx_companies_metadata_age
+            ON companies (metadata_updated_at NULLS FIRST);
+    """),
+
     ("column: stock_data.trade_count + vwap", """
         ALTER TABLE stock_data
             ADD COLUMN IF NOT EXISTS trade_count BIGINT,

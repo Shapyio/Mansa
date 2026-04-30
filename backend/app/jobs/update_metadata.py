@@ -1,11 +1,13 @@
-"""Refresh company metadata (sector, industry, market cap, etc.)."""
+"""Refresh company metadata (name, sector, industry, market cap, etc.) via FMP."""
 
 from app.jobs._audit import tracked
+from app.services.metadata_service import resolve_symbol, upsert_company_metadata
 
 
 @tracked
 def update_metadata(company_id: int = None, symbol: str = None, **_ignored):
-    if company_id is None and symbol is None:
+    if not symbol and company_id is None:
         raise ValueError("update_metadata requires company_id or symbol")
-    # TODO: wire to backend/core/ingestion company-metadata fetcher
-    return {"company_id": company_id, "symbol": symbol, "stub": True}
+
+    sym = symbol or resolve_symbol(company_id)
+    return upsert_company_metadata(sym)
