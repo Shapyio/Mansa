@@ -4,6 +4,7 @@ import AppLayout from "./components/layout/AppLayout";
 
 import Dashboard from "./pages/DashboardPage";
 import Stocks from "./pages/StocksPage";
+import StockDetail from "./pages/StockDetailPage";
 import Tools from "./pages/ToolsPage";
 import Performance from "./pages/PerformancePage";
 import News from "./pages/NewsPage";
@@ -18,6 +19,7 @@ export default function App() {
 
           <Route path="/" element={<Dashboard />} />
           <Route path="/stocks" element={<Stocks />} />
+          <Route path="/stocks/:symbol" element={<StockDetail />} />
           <Route path="/tools" element={<Tools />} />
           <Route path="/performance" element={<Performance />} />
           <Route path="/news" element={<News />} />

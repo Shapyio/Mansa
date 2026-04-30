@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+
 import Widget from "../grid/Widget";
 import Button from "../ui/Button";
+import Badge from "../ui/Badge";
 import { IconRefresh, IconSearch } from "../ui/Icons";
 import { getStocks } from "../../api/stocks";
 import type { WidgetEditProps } from "./Registry";
@@ -14,6 +17,7 @@ type Stock = {
 const COLS: { key: keyof Stock; label: string; numeric?: boolean }[] = [
   { key: "symbol", label: "Symbol" },
   { key: "last_price", label: "Last", numeric: true },
+  { key: "day_change_pct" as any, label: "Δ%", numeric: true },
   { key: "volume", label: "Volume", numeric: true },
 ];
 
@@ -90,13 +94,24 @@ export default function StocksTableWidget({ editMode, onRemove }: WidgetEditProp
           <tbody>
             {loading && <tr><td colSpan={COLS.length} className="empty">Loading…</td></tr>}
             {!loading && rows.length === 0 && <tr><td colSpan={COLS.length} className="empty">No matches</td></tr>}
-            {!loading && rows.map((s) => (
-              <tr key={s.symbol}>
-                <td><span style={{ fontWeight: 500 }}>{s.symbol}</span></td>
-                <td className="num">${s.last_price.toFixed(2)}</td>
-                <td className="num">{s.volume != null ? s.volume.toLocaleString() : "—"}</td>
-              </tr>
-            ))}
+            {!loading && rows.map((s: any) => {
+              const dc = s.day_change_pct as number | null | undefined;
+              const tone = dc == null ? "default" : dc >= 0 ? "up" : "down";
+              return (
+                <tr key={s.symbol}>
+                  <td>
+                    <Link to={`/stocks/${s.symbol}`} style={{ fontWeight: 500, color: "var(--text)" }}>
+                      {s.symbol}
+                    </Link>
+                  </td>
+                  <td className="num">${(s.last_price ?? 0).toFixed(2)}</td>
+                  <td className="num">
+                    {dc != null ? <Badge tone={tone}>{`${dc.toFixed(2)}%`}</Badge> : <span style={{ color: "var(--text-faint)" }}>—</span>}
+                  </td>
+                  <td className="num">{s.volume != null ? Number(s.volume).toLocaleString() : "—"}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
