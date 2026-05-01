@@ -60,6 +60,16 @@ export const enqueueMetadataUpdates = (company_ids: number[]) =>
     body: JSON.stringify({ company_ids }),
   });
 
+export const checkStaleFeatures = () =>
+  jfetch<{ count: number; companies: any[] }>("/api/jobs/features/stale");
+
+export const enqueueFeatureComputes = (company_ids: number[]) =>
+  jfetch<{ enqueued: number }>("/api/jobs/features/enqueue", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ company_ids }),
+  });
+
 export const retryFailedJobs = () =>
   jfetch<{ retried: number }>("/api/jobs/retry-failed", { method: "POST" });
 

@@ -6,7 +6,8 @@ import Button from "../components/ui/Button";
 import { IconFilter, IconPause, IconPlay, IconRefresh } from "../components/ui/Icons";
 import {
   type JobRow, type JobStatus, type JobStatusResponse,
-  checkDataGaps, checkStaleMetadata, enqueueGaps, enqueueMetadataUpdates,
+  checkDataGaps, checkStaleFeatures, checkStaleMetadata,
+  enqueueFeatureComputes, enqueueGaps, enqueueMetadataUpdates,
   getJobStatus, pauseAll, pauseJob, resumeAll, resumeJob,
   retryFailedJobs, runTick, submitJob,
 } from "../api/jobs";
@@ -102,6 +103,13 @@ export default function Tools() {
             const e = await enqueueMetadataUpdates(r.companies.map((c: any) => c.id));
             return `${r.count} stale · enqueued ${e.enqueued}`;
           })}>{busy === "meta" ? "…" : "Stale Metadata"}</Button>
+
+          <Button disabled={!!busy} onClick={() => run("feat", async () => {
+            const r = await checkStaleFeatures();
+            if (!r.count) return "All features up-to-date";
+            const e = await enqueueFeatureComputes(r.companies.map((c: any) => c.id));
+            return `${r.count} stale features · enqueued ${e.enqueued}`;
+          })}>{busy === "feat" ? "…" : "Recompute Features"}</Button>
 
           <Button disabled={!!busy} onClick={() => run("train", async () => {
             const r = await submitJob("train_model", { symbol: "AAPL" }, { tags: ["Manual"] });

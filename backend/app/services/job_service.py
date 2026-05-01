@@ -266,3 +266,9 @@ def enqueue_metadata_updates(company_ids: list[int]) -> int:
     for cid in company_ids:
         enqueue_job("update_metadata", {"company_id": cid}, priority=5)
     return len(company_ids)
+
+
+def enqueue_feature_computes(company_ids: list[int]) -> int:
+    for cid in company_ids:
+        enqueue_job("compute_features", {"company_id": cid}, priority=6)
+    return len(company_ids)

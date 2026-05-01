@@ -6,8 +6,10 @@ from sqlalchemy import text
 
 from app.infrastructure.database import engine
 from app.services.scheduler_service import daily_tick
+from app.services.features_service import MIN_BARS as FEATURE_MIN_BARS
 from app.services.job_service import (
     JOB_HANDLERS,
+    enqueue_feature_computes,
     enqueue_gap_fills,
     enqueue_job,
     enqueue_metadata_updates,
@@ -119,6 +121,60 @@ class EnqueueMetadataRequest(BaseModel):
 @router.post("/metadata/enqueue")
 def enqueue_metadata(body: EnqueueMetadataRequest):
     return {"enqueued": enqueue_metadata_updates(body.company_ids)}
+
+
+# ---------------------------------------------------------------------------
+# Features
+# ---------------------------------------------------------------------------
+
+def _find_stale_features() -> list[dict]:
+    """
+    Companies whose features are missing or behind the latest bar.
+    A row is "stale" when:
+      - features have never been computed, OR
+      - the most-recent bar is newer than the most-recent feature row.
+    Companies with fewer than MIN_BARS bars are skipped (no point computing).
+    """
+    with engine.connect() as conn:
+        rows = conn.execute(text(f"""
+            SELECT
+                c.id, c.symbol, c.name,
+                bars.last_bar,
+                feats.last_feat,
+                bars.bar_count,
+                CASE
+                    WHEN feats.last_feat IS NULL THEN 'never_computed'
+                    ELSE 'behind'
+                END AS reason
+            FROM companies c
+            JOIN LATERAL (
+                SELECT MAX(timestamp) AS last_bar, COUNT(*) AS bar_count
+                  FROM stock_data WHERE company_id = c.id
+            ) bars ON true
+            LEFT JOIN LATERAL (
+                SELECT MAX(date) AS last_feat
+                  FROM stock_features WHERE company_id = c.id
+            ) feats ON true
+            WHERE bars.bar_count >= {int(FEATURE_MIN_BARS)}
+              AND (feats.last_feat IS NULL OR date(bars.last_bar) > feats.last_feat)
+            ORDER BY feats.last_feat NULLS FIRST, c.symbol
+        """)).fetchall()
+    return [dict(r._mapping) for r in rows]
+
+
+@router.get("/features/stale")
+def check_stale_features():
+    stale = _find_stale_features()
+    return {"count": len(stale), "companies": stale}
+
+
+class EnqueueFeaturesRequest(BaseModel):
+    company_ids: list[int]
+
+
+@router.post("/features/enqueue")
+def enqueue_features(body: EnqueueFeaturesRequest):
+    return {"enqueued": enqueue_feature_computes(body.company_ids)}
 
 
 @router.post("/retry-failed")
