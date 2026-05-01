@@ -47,6 +47,14 @@ data/processed/
 *.json
 *.parquet
 *.xlsx
+# Keep tracked configuration JSONs (the *.json rule above is for data dumps)
+!**/package.json
+!**/package-lock.json
+!**/tsconfig*.json
+!**/eslint.config.json
+!**/.eslintrc.json
+!frontend/**/*.json
+!backend/**/*.json
 
 # === Logs, reports, and outputs ===
 logs/
