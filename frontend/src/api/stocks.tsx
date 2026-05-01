@@ -39,6 +39,23 @@ export interface BarRow {
   vwap: number | null;
 }
 
+export interface FeatureRow {
+  date: string;
+  sma_20: number | null;
+  sma_50: number | null;
+  ema_12: number | null;
+  ema_26: number | null;
+  rsi_14: number | null;
+  macd: number | null;
+  macd_signal: number | null;
+  macd_hist: number | null;
+  atr_14: number | null;
+  bb_upper: number | null;
+  bb_lower: number | null;
+  obv: number | null;
+  vwap_deviation: number | null;
+}
+
 export interface SectorRow   { id: number; name: string; company_count: number }
 export interface IndustryRow { id: number; name: string; company_count: number }
 
@@ -69,6 +86,14 @@ export const getStockHistory = (symbol: string, start?: string, end?: string) =>
   if (end)   p.set("end",   end);
   const qs = p.toString();
   return jget<BarRow[]>(`/api/stocks/${encodeURIComponent(symbol)}/history${qs ? `?${qs}` : ""}`);
+};
+
+export const getStockFeatures = (symbol: string, start?: string, end?: string) => {
+  const p = new URLSearchParams();
+  if (start) p.set("start", start);
+  if (end)   p.set("end",   end);
+  const qs = p.toString();
+  return jget<FeatureRow[]>(`/api/stocks/${encodeURIComponent(symbol)}/features${qs ? `?${qs}` : ""}`);
 };
 
 export const getSectors    = () => jget<SectorRow[]>("/api/stocks/sectors");

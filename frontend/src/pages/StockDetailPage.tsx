@@ -5,11 +5,21 @@ import PageHeader from "../components/layout/PageHeader";
 import Badge from "../components/ui/Badge";
 import Button from "../components/ui/Button";
 import { IconRefresh } from "../components/ui/Icons";
-import PriceChart, { type ChartKind } from "../components/charts/PriceChart";
+import PriceChart, { type ChartKind, type Overlay } from "../components/charts/PriceChart";
 import {
-  type BarRow, type StockProfile,
-  getStockHistory, getStockProfile,
+  type BarRow, type FeatureRow, type StockProfile,
+  getStockFeatures, getStockHistory, getStockProfile,
 } from "../api/stocks";
+
+type IndicatorKey = "sma_20" | "sma_50" | "ema_12" | "ema_26" | "bb";
+
+const INDICATOR_DEFS: { key: IndicatorKey; label: string; color: string }[] = [
+  { key: "sma_20", label: "SMA 20", color: "#38bdf8" }, // sky
+  { key: "sma_50", label: "SMA 50", color: "#a855f7" }, // violet
+  { key: "ema_12", label: "EMA 12", color: "#f59e0b" }, // amber
+  { key: "ema_26", label: "EMA 26", color: "#fb7185" }, // rose
+  { key: "bb",     label: "Bollinger 20/2σ", color: "#94a3b8" },
+];
 
 type RangeKey = "1D" | "1W" | "1M" | "3M" | "6M" | "YTD" | "1Y" | "5Y" | "ALL" | "CUSTOM";
 
@@ -54,14 +64,16 @@ export default function StockDetail() {
 
   const [profile, setProfile] = useState<StockProfile | null>(null);
   const [bars,    setBars]    = useState<BarRow[]>([]);
+  const [feats,   setFeats]   = useState<FeatureRow[]>([]);
   const [range,   setRange]   = useState<RangeKey>("6M");
   const [kind,    setKind]    = useState<ChartKind>("candle");
   const [showVol, setShowVol] = useState(true);
   const [custom,  setCustom]  = useState<{ start: string; end: string }>({
     start: "", end: "",
   });
-  const [loading, setLoading] = useState(true);
-  const [err,     setErr]     = useState<string | null>(null);
+  const [loading,  setLoading]   = useState(true);
+  const [err,      setErr]       = useState<string | null>(null);
+  const [active,   setActive]    = useState<Set<IndicatorKey>>(new Set());
 
   // Profile load
   useEffect(() => {
@@ -90,11 +102,57 @@ export default function StockDetail() {
       start = b.start?.toISOString().slice(0, 10);
       end   = b.end.toISOString().slice(0, 10);
     }
-    getStockHistory(sym, start, end)
-      .then((b) => { if (!cancelled) setBars(b); })
+    Promise.all([
+      getStockHistory(sym, start, end),
+      getStockFeatures(sym, start, end).catch(() => [] as FeatureRow[]),
+    ])
+      .then(([b, f]) => {
+        if (cancelled) return;
+        setBars(b);
+        setFeats(f);
+      })
       .catch((e) => { if (!cancelled) setErr((e as Error).message); });
     return () => { cancelled = true; };
   }, [sym, range, custom.start, custom.end, profile?.last_update]);
+
+  const overlays = useMemo<Overlay[]>(() => {
+    if (active.size === 0 || feats.length === 0) return [];
+    const out: Overlay[] = [];
+
+    if (active.has("sma_20")) out.push({
+      id: "sma_20", color: "#38bdf8", lineWidth: 2,
+      data: feats.map((f) => ({ date: f.date, value: f.sma_20 })),
+    });
+    if (active.has("sma_50")) out.push({
+      id: "sma_50", color: "#a855f7", lineWidth: 2,
+      data: feats.map((f) => ({ date: f.date, value: f.sma_50 })),
+    });
+    if (active.has("ema_12")) out.push({
+      id: "ema_12", color: "#f59e0b", lineWidth: 2,
+      data: feats.map((f) => ({ date: f.date, value: f.ema_12 })),
+    });
+    if (active.has("ema_26")) out.push({
+      id: "ema_26", color: "#fb7185", lineWidth: 2,
+      data: feats.map((f) => ({ date: f.date, value: f.ema_26 })),
+    });
+    if (active.has("bb")) {
+      out.push({
+        id: "bb_upper", color: "#94a3b8", lineWidth: 1, lineStyle: 2,
+        data: feats.map((f) => ({ date: f.date, value: f.bb_upper })),
+      });
+      out.push({
+        id: "bb_lower", color: "#94a3b8", lineWidth: 1, lineStyle: 2,
+        data: feats.map((f) => ({ date: f.date, value: f.bb_lower })),
+      });
+    }
+    return out;
+  }, [active, feats]);
+
+  const toggle = (k: IndicatorKey) => setActive((cur) => {
+    const next = new Set(cur);
+    next.has(k) ? next.delete(k) : next.add(k);
+    return next;
+  });
 
   const dayChange = profile?.day_change_pct;
   const tone      = dayChange == null ? "default" : dayChange >= 0 ? "up" : "down";
@@ -190,6 +248,40 @@ export default function StockDetail() {
             </label>
           </div>
 
+          {/* Indicator toggles */}
+          <div className="card card--padded" style={{
+            display: "flex", flexWrap: "wrap", gap: "var(--s-2)", alignItems: "center",
+            marginBottom: "var(--s-3)",
+          }}>
+            <span style={{ fontSize: "var(--fs-xs)", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginRight: "var(--s-2)" }}>
+              Indicators
+            </span>
+            {INDICATOR_DEFS.map((d) => {
+              const on = active.has(d.key);
+              return (
+                <button
+                  key={d.key}
+                  onClick={() => toggle(d.key)}
+                  className={`btn btn--sm${on ? "" : " btn--ghost"}`}
+                  style={on ? {
+                    background: d.color, borderColor: d.color, color: "#04130d",
+                  } : undefined}
+                >
+                  <span style={{
+                    display: "inline-block", width: 10, height: 2,
+                    background: d.color, marginRight: 6, verticalAlign: "middle",
+                  }} />
+                  {d.label}
+                </button>
+              );
+            })}
+            {feats.length === 0 && (
+              <span style={{ marginLeft: "auto", fontSize: "var(--fs-xs)", color: "var(--text-faint)" }}>
+                No features computed yet — run "Recompute Features" on the Tools page.
+              </span>
+            )}
+          </div>
+
           {/* Chart */}
           <div className="card" style={{ padding: 4, marginBottom: "var(--s-4)" }}>
             {bars.length === 0 ? (
@@ -197,7 +289,7 @@ export default function StockDetail() {
                 No data in selected range.
               </div>
             ) : (
-              <PriceChart bars={bars} kind={kind} showVolume={showVol} height={460} />
+              <PriceChart bars={bars} kind={kind} showVolume={showVol} overlays={overlays} height={460} />
             )}
             <div style={{
               padding: "8px 12px", fontSize: "var(--fs-xs)", color: "var(--text-muted)",

@@ -49,3 +49,13 @@ def stock_history(
     db: Session = Depends(get_db),
 ):
     return stock_service.get_stock_history(db, symbol, start, end)
+
+
+@router.get("/{symbol}/features")
+def stock_features(
+    symbol: str,
+    start: Optional[str] = None,
+    end:   Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    return stock_service.get_stock_features(db, symbol, start, end)

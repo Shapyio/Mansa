@@ -144,6 +144,30 @@ def get_stock_profile(db, symbol: str) -> Optional[dict]:
 # History (range-bounded OHLCV)
 # ---------------------------------------------------------------------------
 
+def get_stock_features(db, symbol: str, start: Optional[str] = None, end: Optional[str] = None):
+    """Time-series of computed indicators for a single symbol."""
+    sym = symbol.upper().strip()
+    where = ["c.symbol = :symbol"]
+    params: dict = {"symbol": sym}
+    if start:
+        where.append("date >= :start")
+        params["start"] = start
+    if end:
+        where.append("date <= :end")
+        params["end"] = end
+    sql = f"""
+        SELECT date,
+               sma_20, sma_50, ema_12, ema_26,
+               rsi_14, macd, macd_signal, macd_hist,
+               atr_14, bb_upper, bb_lower, obv, vwap_deviation
+        FROM stock_features sf
+        JOIN companies c ON c.id = sf.company_id
+        WHERE {' AND '.join(where)}
+        ORDER BY date
+    """
+    return [dict(row._mapping) for row in db.execute(text(sql), params)]
+
+
 def get_stock_history(db, symbol: str, start: Optional[str] = None, end: Optional[str] = None):
     sym = symbol.upper().strip()
     where = ["c.symbol = :symbol"]

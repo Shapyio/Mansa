@@ -9,11 +9,20 @@ import type { BarRow } from "../../api/stocks";
 
 export type ChartKind = "candle" | "line" | "area";
 
+export type Overlay = {
+  id:       string;                       // stable key (e.g. "sma20")
+  data:     { date: string; value: number | null }[];
+  color:    string;
+  lineWidth?: 1 | 2 | 3 | 4;
+  lineStyle?: 0 | 1 | 2 | 3 | 4;          // 0=solid, 2=dashed, 3=dotted
+};
+
 type Props = {
   bars: BarRow[];
   kind: ChartKind;
   showVolume?: boolean;
   height?: number;
+  overlays?: Overlay[];
 };
 
 const toTime = (iso: string): Time => iso.slice(0, 10) as Time;
@@ -44,11 +53,14 @@ const safeNum = (v: unknown): number | null => {
   return Number.isFinite(n) ? n : null;
 };
 
-export default function PriceChart({ bars, kind, showVolume = true, height = 420 }: Props) {
+export default function PriceChart({
+  bars, kind, showVolume = true, height = 420, overlays = [],
+}: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chartRef     = useRef<IChartApi | null>(null);
   const priceRef     = useRef<ISeriesApi<any> | null>(null);
   const volRef       = useRef<ISeriesApi<"Histogram"> | null>(null);
+  const overlayRefs  = useRef<Map<string, ISeriesApi<"Line">>>(new Map());
 
   // Create chart once
   useEffect(() => {
@@ -182,6 +194,50 @@ export default function PriceChart({ bars, kind, showVolume = true, height = 420
 
     chartRef.current?.timeScale().fitContent();
   }, [bars, kind]);
+
+  // Sync overlay line series with the `overlays` prop. Add/update for any
+  // id present, remove anything that was dropped.
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+
+    const incomingIds = new Set(overlays.map((o) => o.id));
+    for (const [id, series] of overlayRefs.current) {
+      if (!incomingIds.has(id)) {
+        chart.removeSeries(series);
+        overlayRefs.current.delete(id);
+      }
+    }
+
+    for (const o of overlays) {
+      let series = overlayRefs.current.get(o.id);
+      if (!series) {
+        series = chart.addLineSeries({
+          color: o.color,
+          lineWidth: o.lineWidth ?? 2,
+          lineStyle: o.lineStyle ?? 0,
+          priceLineVisible: false,
+          lastValueVisible: false,
+        });
+        overlayRefs.current.set(o.id, series);
+      } else {
+        series.applyOptions({
+          color: o.color,
+          lineWidth: o.lineWidth ?? 2,
+          lineStyle: o.lineStyle ?? 0,
+        });
+      }
+
+      const raw: LineData[] = o.data
+        .map((d) => {
+          const v = safeNum(d.value);
+          if (v == null) return null;
+          return { time: toTime(d.date), value: v };
+        })
+        .filter((x): x is LineData => x != null);
+      series.setData(sanitize(raw));
+    }
+  }, [overlays]);
 
   return <div ref={containerRef} style={{ width: "100%", height }} />;
 }
