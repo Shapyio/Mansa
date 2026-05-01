@@ -9,3 +9,4 @@ uvicorn[standard] # server
 redis # for job management
 pydantic # data validation/parse
 rq # redis queue to schedule jobs
+requests # FMP HTTP client

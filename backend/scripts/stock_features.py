@@ -1,98 +1,88 @@
-import os
-import pandas as pd
-import pandas_ta as ta
-from sqlalchemy import create_engine, text
+"""
+CLI wrapper around app.services.features_service.
+
+Examples:
+    # One company by id
+    python scripts/stock_features.py --company-id 123
+
+    # By symbol
+    python scripts/stock_features.py AAPL
+
+    # Backfill every company that has at least the minimum bars
+    python scripts/stock_features.py --all
+
+The single-company path is also exposed via the `compute_features` RQ job
+(see app/jobs/compute_features.py); --all is a one-shot backfill before
+the scheduler is fully wired.
+"""
+
+import argparse
+import logging
+import sys
+from pathlib import Path
+
+# Make `app.*` importable when run as a script
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 from dotenv import load_dotenv
+from sqlalchemy import text
 
 load_dotenv()
 
-DATABASE_URL = (
-    f"postgresql://{os.getenv('POSTGRES_USER')}:{os.getenv('POSTGRES_PASSWORD')}"
-    f"@{os.getenv('POSTGRES_HOST')}:{os.getenv('POSTGRES_PORT')}/{os.getenv('POSTGRES_DB')}"
-)
-engine = create_engine(DATABASE_URL)
+from app.infrastructure.database import engine                      # noqa: E402
+from app.services.features_service import compute_for_company       # noqa: E402
 
 
-def compute_for_company(company_id: int, symbol: str):
+def _all_companies() -> list[tuple[int, str]]:
     with engine.connect() as conn:
-        df = pd.read_sql(
-            text("""
-                SELECT date(timestamp) as date, open, high, low, close, volume, vwap
-                FROM stock_data
-                WHERE company_id = :cid
-                ORDER BY timestamp ASC
-            """),
-            conn,
-            params={"cid": company_id}
-        )
+        rows = conn.execute(
+            text("SELECT id, symbol FROM companies ORDER BY symbol")
+        ).fetchall()
+    return [(r.id, r.symbol) for r in rows]
 
-    if df.empty or len(df) < 50:
-        print(f"  Skipping {symbol} — insufficient data ({len(df)} rows)")
+
+def _resolve_company(symbol: str) -> tuple[int, str]:
+    with engine.connect() as conn:
+        row = conn.execute(
+            text("SELECT id, symbol FROM companies WHERE symbol = :s"),
+            {"s": symbol.upper()},
+        ).fetchone()
+    if not row:
+        raise SystemExit(f"No company with symbol={symbol!r}")
+    return (row.id, row.symbol)
+
+
+def main() -> None:
+    p = argparse.ArgumentParser()
+    p.add_argument("symbol", nargs="?", help="Single symbol to compute")
+    p.add_argument("--company-id", type=int, help="Single company id")
+    p.add_argument("--all", action="store_true",
+                   help="Compute features for every company")
+    args = p.parse_args()
+
+    logging.basicConfig(level=logging.INFO,
+                        format="%(asctime)s %(levelname)s %(message)s")
+
+    if args.all:
+        companies = _all_companies()
+        print(f"Computing features for {len(companies)} companies")
+        for cid, sym in companies:
+            try:
+                print(compute_for_company(cid, sym))
+            except Exception as e:
+                print(f"  {sym}: {e}", file=sys.stderr)
         return
 
-    df = df.set_index("date")
+    if args.company_id is not None:
+        print(compute_for_company(args.company_id))
+        return
 
-    # --- Compute features ---
-    df["sma_20"]     = ta.sma(df["close"], length=20)
-    df["sma_50"]     = ta.sma(df["close"], length=50)
-    df["ema_12"]     = ta.ema(df["close"], length=12)
-    df["ema_26"]     = ta.ema(df["close"], length=26)
-    df["rsi_14"]     = ta.rsi(df["close"], length=14)
-    df["atr_14"]     = ta.atr(df["high"], df["low"], df["close"], length=14)
-    df["obv"]        = ta.obv(df["close"], df["volume"])
+    if args.symbol:
+        cid, sym = _resolve_company(args.symbol)
+        print(compute_for_company(cid, sym))
+        return
 
-    macd = ta.macd(df["close"])
-    df["macd"]       = macd["MACD_12_26_9"]
-    df["macd_signal"]= macd["MACDs_12_26_9"]
-    df["macd_hist"]  = macd["MACDh_12_26_9"]
-
-    bb = ta.bbands(df["close"], length=20)
-    df["bb_upper"]   = bb["BBU_20_2.0"]
-    df["bb_lower"]   = bb["BBL_20_2.0"]
-
-    df["vwap_deviation"] = ((df["close"] - df["vwap"]) / df["vwap"] * 100).round(4)
-
-    df = df.dropna(subset=["sma_20", "rsi_14"])
-    df["company_id"] = company_id
-    df = df.reset_index()
-
-    # --- Upsert ---
-    upsert_sql = text("""
-        INSERT INTO stock_features (
-            company_id, date,
-            sma_20, sma_50, ema_12, ema_26,
-            rsi_14, macd, macd_signal, macd_hist,
-            atr_14, bb_upper, bb_lower, obv, vwap_deviation
-        )
-        VALUES (
-            :company_id, :date,
-            :sma_20, :sma_50, :ema_12, :ema_26,
-            :rsi_14, :macd, :macd_signal, :macd_hist,
-            :atr_14, :bb_upper, :bb_lower, :obv, :vwap_deviation
-        )
-        ON CONFLICT (company_id, date) DO UPDATE SET
-            sma_20 = EXCLUDED.sma_20,
-            rsi_14 = EXCLUDED.rsi_14,
-            macd   = EXCLUDED.macd,
-            computed_at = now();
-    """)
-
-    with engine.begin() as conn:
-        for _, row in df.iterrows():
-            conn.execute(upsert_sql, row.to_dict())
-
-    print(f"  {symbol}: {len(df)} feature rows upserted")
-
-
-def main():
-    with engine.connect() as conn:
-        companies = conn.execute(
-            text("SELECT id, symbol FROM companies WHERE name IS NOT NULL")
-        ).fetchall()
-
-    for company_id, symbol in companies:
-        print(f"Computing features for {symbol}")
-        compute_for_company(company_id, symbol)
+    p.error("Pass a symbol, --company-id, or --all")
 
 
 if __name__ == "__main__":
