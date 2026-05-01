@@ -315,7 +315,7 @@ MIGRATIONS = [
 
 
 def run_migrations():
-    print(f"Connecting to database...")
+    print("Connecting to database...")
     try:
         conn = psycopg2.connect(DATABASE_URL)
     except Exception as e:

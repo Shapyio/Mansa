@@ -1,7 +1,8 @@
-from sqlalchemy import create_engine, text
+import json
+import os
+
 from dotenv import load_dotenv
-import os, json
-from datetime import date
+from sqlalchemy import create_engine, text
 
 load_dotenv()
 DATABASE_URL = (

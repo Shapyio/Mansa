@@ -21,9 +21,11 @@ def list_stocks(
     where = []
     params: dict = {"limit": limit}
     if sector_id is not None:
-        where.append("c.sector_id = :sector_id"); params["sector_id"] = sector_id
+        where.append("c.sector_id = :sector_id")
+        params["sector_id"] = sector_id
     if industry_id is not None:
-        where.append("c.industry_id = :industry_id"); params["industry_id"] = industry_id
+        where.append("c.industry_id = :industry_id")
+        params["industry_id"] = industry_id
     if search:
         where.append("(c.symbol ILIKE :q OR c.name ILIKE :q)")
         params["q"] = f"%{search}%"
@@ -146,8 +148,12 @@ def get_stock_history(db, symbol: str, start: Optional[str] = None, end: Optiona
     sym = symbol.upper().strip()
     where = ["c.symbol = :symbol"]
     params: dict = {"symbol": sym}
-    if start: where.append("timestamp >= :start"); params["start"] = start
-    if end:   where.append("timestamp <= :end");   params["end"]   = end
+    if start:
+        where.append("timestamp >= :start")
+        params["start"] = start
+    if end:
+        where.append("timestamp <= :end")
+        params["end"] = end
     sql = f"""
         SELECT timestamp, open, high, low, close, volume, trade_count, vwap
         FROM stock_data s

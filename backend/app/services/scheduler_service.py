@@ -35,8 +35,10 @@ GAP_THRESHOLD_DAYS = 5
 
 
 def _int_env(name: str, default: int) -> int:
-    try: return int(os.getenv(name, str(default)))
-    except (TypeError, ValueError): return default
+    try:
+        return int(os.getenv(name, str(default)))
+    except (TypeError, ValueError):
+        return default
 
 
 def _stale_metadata_company_ids(limit: int, days: int) -> list[int]:
