@@ -1,16 +1,10 @@
 """
-Technical-feature computation — pure pandas, no extra deps.
+Computes technical indicators for a company and writes them to stock_features.
 
-Mirrors the structure of `ohlcv_service.py` and `metadata_service.py`:
-  - Pure function `compute_for_company(company_id)` orchestrates everything.
-  - Reads OHLCV from `stock_data`, computes indicators, upserts into
-    `stock_features`. Idempotent — re-running overwrites all columns.
-  - Returns a summary dict so RQ jobs / CLIs can report what happened.
+Indicators: SMA(20), SMA(50), EMA(12), EMA(26), RSI(14), MACD(12,26,9),
+ATR(14), Bollinger Bands(20, 2σ), OBV, VWAP-deviation %.
 
-Indicators (all match the legacy column set in `stock_features`):
-  SMA(20), SMA(50), EMA(12), EMA(26), RSI(14, Wilder),
-  MACD(12,26,9), ATR(14, Wilder), Bollinger Bands(20, 2σ),
-  OBV (on-balance volume), VWAP-deviation %.
+All done in plain pandas — no pandas-ta. Re-running just overwrites.
 """
 
 import logging
@@ -21,15 +15,16 @@ import pandas as pd
 from sqlalchemy import text
 
 from app.infrastructure.database import engine
+from app.services.metadata_service import resolve_symbol
 
 log = logging.getLogger(__name__)
 
-# SMA(50) is the longest lookback we compute; below this we'd produce all NaN.
+# Below 50 bars every indicator would just be NaN, so we skip the company.
 MIN_BARS = 50
 
 
 # ---------------------------------------------------------------------------
-# Indicator helpers — kept tiny and dependency-free.
+# Indicator math
 # ---------------------------------------------------------------------------
 
 def _sma(s: pd.Series, n: int) -> pd.Series:
@@ -82,15 +77,6 @@ def _obv(close: pd.Series, volume: pd.Series) -> pd.Series:
 # ---------------------------------------------------------------------------
 # Orchestration
 # ---------------------------------------------------------------------------
-
-def _resolve_symbol(company_id: int) -> Optional[str]:
-    with engine.connect() as conn:
-        row = conn.execute(
-            text("SELECT symbol FROM companies WHERE id = :id"),
-            {"id": company_id},
-        ).fetchone()
-    return row[0] if row else None
-
 
 def _load_ohlcv(company_id: int) -> pd.DataFrame:
     with engine.connect() as conn:
@@ -171,7 +157,13 @@ def _row_dict(company_id: int, row: pd.Series) -> dict:
 
 
 def compute_for_company(company_id: int, symbol: Optional[str] = None) -> dict:
-    sym = symbol or _resolve_symbol(company_id)
+    """Recompute every feature row for one company.
+
+    Usually triggered by fill_gap when new bars arrive, but you can also
+    call it directly from the CLI or the Tools page.
+    """
+    # Callers with just a company_id shouldn't have to look up the symbol.
+    sym = symbol or resolve_symbol(company_id)
     if sym is None:
         raise ValueError(f"No company with id={company_id}")
 
@@ -191,8 +183,9 @@ def compute_for_company(company_id: int, symbol: Optional[str] = None) -> dict:
 
     rows = [_row_dict(company_id, r) for _, r in feats.iterrows()]
 
+    # One batched insert instead of a row-by-row loop.
     with engine.begin() as conn:
-        conn.execute(_UPSERT_SQL, rows)  # one round-trip via executemany
+        conn.execute(_UPSERT_SQL, rows)
 
     log.info("Computed %d feature rows for %s", len(rows), sym)
     return {

@@ -1,12 +1,9 @@
 """
-RQ worker entrypoint.
+Starts an RQ worker that pulls from the high → default → low queues.
 
-Processes jobs from the high -> default -> low queues in priority order.
-Lifecycle bookkeeping (running/done/failed/paused timestamps) is handled by
-the @tracked decorator in app.jobs._audit, so this file stays thin.
-
-Run inside the worker container:
-    python workers/worker.py
+The @tracked decorator on each handler handles status updates, so this
+file stays small. Runs as `python workers/worker.py` inside the worker
+container.
 """
 
 import os
@@ -23,8 +20,8 @@ QUEUE_NAMES = ["high", "default", "low"]
 
 
 def main() -> None:
-    # `rq.Connection` was removed in RQ 1.13+; pass the connection directly
-    # to Queue/Worker instead of using the deprecated context manager.
+    # RQ 1.13+ dropped the Connection context manager — pass the connection
+    # straight to Queue/Worker.
     queues = [Queue(name, connection=redis_conn) for name in QUEUE_NAMES]
     worker = Worker(queues, connection=redis_conn)
     print(f"RQ worker listening on: {QUEUE_NAMES}", flush=True)

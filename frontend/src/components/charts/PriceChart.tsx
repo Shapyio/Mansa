@@ -28,10 +28,9 @@ type Props = {
 const toTime = (iso: string): Time => iso.slice(0, 10) as Time;
 
 /**
- * lightweight-charts requires strictly ascending, unique time values.
- * Backend rows can occasionally collide once we slice to YYYY-MM-DD
- * (duplicate upserts, intraday bars stored with off-hours timestamps,
- * etc). Sort + last-write-wins dedupe so the chart never asserts.
+ * lightweight-charts wants strictly ascending, unique dates. Sometimes the
+ * backend gives us two rows for the same day (duplicate upserts, extra
+ * intraday bars). Sort, then keep the last row for each date.
  */
 function sanitize<T extends { time: Time }>(rows: T[]): T[] {
   const sorted = [...rows].sort((a, b) =>
@@ -40,7 +39,7 @@ function sanitize<T extends { time: Time }>(rows: T[]): T[] {
   const out: T[] = [];
   for (const r of sorted) {
     if (out.length && out[out.length - 1].time === r.time) {
-      out[out.length - 1] = r;            // last wins
+      out[out.length - 1] = r;            // same date — keep this one
     } else {
       out.push(r);
     }
@@ -195,8 +194,7 @@ export default function PriceChart({
     chartRef.current?.timeScale().fitContent();
   }, [bars, kind]);
 
-  // Sync overlay line series with the `overlays` prop. Add/update for any
-  // id present, remove anything that was dropped.
+  // Add/update/remove overlay lines as the `overlays` prop changes.
   useEffect(() => {
     const chart = chartRef.current;
     if (!chart) return;

@@ -1,4 +1,4 @@
-"""Refresh company metadata (name, sector, industry, market cap, etc.) via FMP."""
+"""Refresh a company's name, sector, market cap, etc. from FMP."""
 
 from app.jobs._audit import tracked
 from app.services.metadata_service import resolve_symbol, upsert_company_metadata

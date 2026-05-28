@@ -86,7 +86,8 @@ export default function StockDetail() {
     return () => { cancelled = true; };
   }, [sym]);
 
-  // Bars load — depends on range + custom + profile (need last_update for relative ranges)
+  // Load bars + features whenever the range changes. Relative ranges (1M, YTD…)
+  // anchor off the company's last data date, so we wait for the profile first.
   useEffect(() => {
     if (!profile?.last_update) return;
     let cancelled = false;

@@ -1,17 +1,9 @@
 """
-OHLCV ingestion service — refactored from scripts/get_data.py.
+Fetches daily bars from Alpaca and saves them to `stock_data`.
 
-Exposes `fetch_and_upsert(symbol, start, end, feed)` so it can be called from:
-  - RQ handlers (app/jobs/fill_gap.py)
-  - CLI scripts
-  - cron jobs / GitHub Actions
-
-Behavior:
-  - Lazy Alpaca client (no work at import).
-  - Retry + 429 -> TokenBudgetExceeded via call_with_retry.
-  - Single batched executemany() upsert (was per-row, very slow on backfills).
-  - Auto-creates the company row if missing.
-  - Returns {"rows_upserted": N, "symbol": ..., "start": ..., "end": ...}.
+Called from the fill_gap job, the CLI script, or anywhere else that
+needs to pull price history. A 429 from Alpaca turns into a paused job
+that the scheduler retries tomorrow.
 """
 
 import datetime as dt
@@ -90,6 +82,8 @@ def fetch_and_upsert(
 
     log.info("Fetching %s bars %s -> %s (feed=%s)", symbol, start_dt.date(), end_dt.date(), feed)
 
+    # iex = free, partial coverage. sip = paid, full coverage. Same call.
+
     req = StockBarsRequest(
         symbol_or_symbols=symbol,
         timeframe=timeframe,
@@ -124,8 +118,9 @@ def fetch_and_upsert(
         for _, r in df.iterrows()
     ]
 
+    # One batched insert — way faster than the per-row loop we had before.
     with engine.begin() as conn:
-        conn.execute(_UPSERT_SQL, rows)  # one round-trip, executemany under the hood
+        conn.execute(_UPSERT_SQL, rows)
 
     log.info("Upserted %d rows for %s", len(rows), symbol)
     return {

@@ -1,10 +1,19 @@
+"""
+Everything the UI reads about stocks — the list page and the detail page.
+
+The `LATERAL ... LIMIT 1` pattern is used a lot in here. A plain GROUP BY
+to find each company's latest bar reads the whole hypertable, which was
+making /stocks hang. LATERAL with a LIMIT 1 hits the (company_id,
+timestamp) index instead — one quick lookup per company.
+"""
+
 from typing import Optional
 
 from sqlalchemy import text
 
 
 # ---------------------------------------------------------------------------
-# List + filters
+# /stocks list page
 # ---------------------------------------------------------------------------
 
 def list_stocks(
@@ -14,10 +23,7 @@ def list_stocks(
     search:      Optional[str] = None,
     limit:       int = 10000,
 ):
-    """
-    One row per company with latest price, day-over-day delta, sector/industry
-    names, and last data + metadata timestamps.
-    """
+    """One row per company: latest price, day change, sector/industry, etc."""
     where = []
     params: dict = {"limit": limit}
     if sector_id is not None:
@@ -31,9 +37,8 @@ def list_stocks(
         params["q"] = f"%{search}%"
     where_sql = ("WHERE " + " AND ".join(where)) if where else ""
 
-    # LATERAL + ORDER BY timestamp DESC LIMIT 1 lets Postgres do a loose
-    # index scan over (company_id, timestamp). On a hypertable this is
-    # ~O(N_companies * log) instead of scanning every row.
+    # `latest` = the most recent bar. `prev` = the one before it, so we
+    # can show day-over-day %. See module docstring for why LATERAL.
     query = text(f"""
         SELECT
             c.id, c.symbol, c.name, c.exchange,
@@ -76,8 +81,12 @@ def list_stocks(
 # ---------------------------------------------------------------------------
 
 def get_stock_profile(db, symbol: str) -> Optional[dict]:
-    """Single-symbol query — scans only that company's rows, so heavy
-    aggregates (52w hi/lo, all-time hi/lo, count) are cheap here."""
+    """Everything the /stocks/:symbol detail page needs in one query.
+
+    The 52w / all-time aggregates are cheap here because every step is
+    scoped to one company. Running the same thing across all companies
+    would be much slower.
+    """
     sym = symbol.upper().strip()
     row = db.execute(text("""
         WITH this_co AS (

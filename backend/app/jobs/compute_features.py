@@ -1,4 +1,4 @@
-"""Recompute technical features (SMA, RSI, MACD, etc.) for a company."""
+"""Recompute SMA, RSI, MACD, etc. for one company."""
 
 from app.jobs._audit import tracked
 from app.services.features_service import compute_for_company

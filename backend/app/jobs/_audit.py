@@ -1,29 +1,29 @@
 """
-Audit + control wrapper for RQ handlers.
+Keeps the Postgres `jobs` table in sync with what RQ workers are doing.
 
-Each handler is a plain function. The @tracked decorator wraps it so that:
-  - Postgres `jobs` row transitions pending -> running -> done/failed/paused
-  - started_at / finished_at / paused_at timestamps are written
-  - TokenBudgetExceeded -> status='paused' (not failed); job can be resumed later
-  - Any other exception -> status='failed', error_msg captured
+Wrap any job handler with @tracked and the audit row will flip from
+pending → running → done (or failed, or paused) as the function runs.
+Handlers stay clean — no DB writes for status, just return or raise.
 """
 
 import functools
 import traceback
+
 from sqlalchemy import text
 
 from app.infrastructure.database import engine
 
 
 class TokenBudgetExceeded(Exception):
-    """Raised by a handler when an upstream API rate/token budget is gone.
+    """Raised when a handler hits an API rate limit.
 
-    The wrapper treats this differently from a failure: the job is parked
-    in 'paused' state and can be resumed once the budget refills.
+    Tells @tracked to mark the job 'paused' instead of 'failed' — that way
+    the scheduler will pick it back up tomorrow when the quota resets.
     """
 
 
 def _set_running(job_id: int) -> None:
+    # COALESCE keeps the original started_at if this is a retry.
     with engine.begin() as conn:
         conn.execute(
             text("""
@@ -49,6 +49,8 @@ def _set_done(job_id: int) -> None:
 
 
 def _set_failed(job_id: int, err: str) -> None:
+    # Out of retries? Mark as failed. Still have attempts? Put it back in
+    # the queue and let the next worker try again.
     with engine.begin() as conn:
         conn.execute(
             text("""
@@ -60,7 +62,7 @@ def _set_failed(job_id: int, err: str) -> None:
                     error_msg = :err
                 WHERE id = :id
             """),
-            {"id": job_id, "err": err[:2000]},
+            {"id": job_id, "err": err[:2000]},   # don't bloat the table with huge tracebacks
         )
 
 
@@ -77,7 +79,11 @@ def _set_paused(job_id: int, reason: str) -> None:
 
 
 def tracked(fn):
-    """Wrap an RQ handler so its lifecycle is mirrored into Postgres."""
+    """Wrap a job handler so the Postgres `jobs` row tracks what's happening.
+
+    `job_id` here is the Postgres row id, not the RQ id. It's passed in by
+    enqueue_job.
+    """
 
     @functools.wraps(fn)
     def wrapper(*args, job_id: int, **kwargs):
@@ -87,6 +93,8 @@ def tracked(fn):
             _set_done(job_id)
             return result
         except TokenBudgetExceeded as e:
+            # Still re-raise — RQ needs to know the call didn't return.
+            # The UI reads from Postgres though, where it'll show 'paused'.
             _set_paused(job_id, str(e) or "token budget exceeded")
             raise
         except Exception:

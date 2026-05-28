@@ -103,12 +103,18 @@ export const resumeAll = () =>
 export interface TickResult {
   metadata_budget: number;
   gap_budget: number;
+  features_budget: number;
   resumed: number;
   metadata_enqueued: number;
   gaps_enqueued: number;
+  features_enqueued: number;
 }
 
-export const runTick = (opts: { metadata_budget?: number; gap_budget?: number } = {}) =>
+export const runTick = (opts: {
+  metadata_budget?: number;
+  gap_budget?: number;
+  features_budget?: number;
+} = {}) =>
   jfetch<TickResult>("/api/jobs/tick", {
     method: "POST",
     headers: { "Content-Type": "application/json" },

@@ -1,3 +1,15 @@
+"""
+All job queueing, pausing, and resuming goes through here.
+
+Two stores work together:
+  - Postgres `jobs` table — what the UI reads. Records every job that
+    ever existed and its current status.
+  - Redis (RQ) — the actual work queue the workers read from.
+
+enqueue_job() writes to both. The @tracked decorator on handlers keeps
+the Postgres row up to date as work runs.
+"""
+
 import json
 from typing import Optional
 
@@ -7,7 +19,8 @@ from app.infrastructure.database import engine
 from app.infrastructure.queue import get_queue, queues, redis_conn
 
 
-# job_type -> (importable handler path, default tags)
+# job_type -> (handler import path, default tags for the audit row).
+# Tags drive the filter chips on the Tools page.
 JOB_HANDLERS: dict[str, tuple[str, list[str]]] = {
     "fill_gap":         ("app.jobs.fill_gap.fill_gap",                 ["ETL", "DB"]),
     "import_ohlcv":     ("app.jobs.fill_gap.fill_gap",                 ["ETL", "DB"]),
@@ -29,10 +42,10 @@ def enqueue_job(
     priority: int = 5,
     tags: Optional[list[str]] = None,
 ) -> dict:
-    """
-    1. Insert audit row in Postgres (status=pending) with tags + payload.
-    2. Push the work onto the matching RQ queue.
-    Returns {pg_job_id, rq_job_id}.
+    """Create a job — write the Postgres row, then push to Redis.
+
+    If the Redis push blows up after the row was inserted, we delete the
+    row so the UI doesn't show a job that's never going to run.
     """
     if job_type not in JOB_HANDLERS:
         raise ValueError(f"Unknown job type: {job_type}")
@@ -40,6 +53,7 @@ def enqueue_job(
     handler_path, default_tags = JOB_HANDLERS[job_type]
     merged_tags = sorted(set((tags or []) + default_tags))
 
+    # 1. Audit row
     with engine.begin() as conn:
         row = conn.execute(
             text("""
@@ -56,18 +70,19 @@ def enqueue_job(
         ).fetchone()
         pg_job_id = row[0]
 
+    # 2. Push to Redis. Heads-up: Queue.enqueue itself takes a `job_id`
+    # kwarg (RQ's own id), so handler args go through kwargs= to avoid
+    # a name collision.
     fn = _import_handler(handler_path)
     queue = get_queue(priority)
-    # `job_id` is also a kwarg on Queue.enqueue itself (the RQ job id), so
-    # pass handler args via kwargs= to avoid collision.
     try:
         rq_job = queue.enqueue(fn, kwargs={"job_id": pg_job_id, **payload})
     except Exception:
-        # Don't leave an orphaned pending row with no Redis-side job.
         with engine.begin() as conn:
             conn.execute(text("DELETE FROM jobs WHERE id=:id"), {"id": pg_job_id})
         raise
 
+    # Save the RQ id on the row so pause/resume can find it later.
     with engine.begin() as conn:
         conn.execute(
             text("UPDATE jobs SET rq_job_id=:rid WHERE id=:id"),
@@ -146,9 +161,10 @@ def retry_failed_jobs() -> int:
 
 
 def pause_job(pg_job_id: int, reason: str = "manual") -> bool:
-    """
-    Cancel the RQ-side enqueue (if still queued) and mark Postgres row 'paused'.
-    Running jobs continue until they finish or self-pause via TokenBudgetExceeded.
+    """Pull a queued job out of Redis and mark it 'paused' in Postgres.
+
+    If the job is already running on a worker, it'll finish first — we
+    can't safely stop Python code mid-execution.
     """
     from rq.job import Job
     from rq.exceptions import NoSuchJobError
@@ -179,7 +195,10 @@ def pause_job(pg_job_id: int, reason: str = "manual") -> bool:
 
 
 def resume_job(pg_job_id: int) -> Optional[dict]:
-    """Re-enqueue a paused job. Returns new ids or None if not paused."""
+    """Re-queue a paused job with its original payload and priority.
+
+    Returns the new ids, or None if the job isn't actually paused.
+    """
     with engine.begin() as conn:
         row = conn.execute(
             text("""
@@ -275,12 +294,14 @@ def enqueue_feature_computes(company_ids: list[int]) -> int:
 
 
 def enqueue_compute_features_if_not_pending(company_id: int) -> Optional[int]:
-    """
-    Chain helper called from `fill_gap`. Skips the enqueue if a
-    compute_features job for the same company is already pending or running,
-    so a flurry of gap-fills doesn't pile up dozens of redundant computes.
+    """Queue a compute_features job, but skip if one is already waiting.
 
-    Returns the new pg_job_id when enqueued, or None when skipped.
+    Called from fill_gap. If 30 gap-fills for AAPL all chained a
+    compute_features, we'd run 30 redundant computes. With this check,
+    only the first one queues — the rest see "already pending" and skip.
+    The one that runs picks up all the fresh data anyway.
+
+    Returns the new job id, or None if we skipped.
     """
     with engine.connect() as conn:
         existing = conn.execute(

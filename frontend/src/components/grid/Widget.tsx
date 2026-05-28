@@ -13,9 +13,8 @@ type WidgetProps = {
 };
 
 /**
- * Card-style widget. The header acts as the drag handle in edit mode.
- * Use the `widget__no-drag` class on any interactive element inside the
- * header that should NOT trigger a drag (handled by DashboardGrid).
+ * Card-style widget. Drag it by the header (when edit mode is on).
+ * Put `widget__no-drag` on header buttons so clicks don't start a drag.
  */
 export default function Widget({
   title, subtitle, controls, editMode, onRemove, children, padded = true,

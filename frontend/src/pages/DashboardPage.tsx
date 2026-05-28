@@ -18,7 +18,6 @@ export default function Dashboard() {
     <>
       <PageHeader
         title="Dashboard"
-        subtitle="Drag the header to move · drag the corner to resize · click + to add"
         actions={
           <>
             {editMode && (

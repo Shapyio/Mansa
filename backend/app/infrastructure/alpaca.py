@@ -1,10 +1,9 @@
 """
-Alpaca client + resilient call wrapper.
+Alpaca client and a retry helper.
 
-- Lazy singleton: avoids constructing a client at import time (workers fork).
-- Retries transient errors with exponential backoff.
-- Translates HTTP 429 (rate limit) into TokenBudgetExceeded so the @tracked
-  decorator can pause the job instead of failing it.
+The client is built on first use, not at import — handlers run in a
+forked worker process. A 429 from Alpaca raises TokenBudgetExceeded so
+the job gets paused instead of failed.
 """
 
 import logging
@@ -43,12 +42,10 @@ def call_with_retry(
     max_attempts: int = 4,
     base_delay: float = 1.0,
 ) -> T:
-    """
-    Run `fn()` with exponential backoff on transient Alpaca errors.
+    """Retry an Alpaca call with backoff.
 
-    - 429  -> raise TokenBudgetExceeded immediately (let the worker pause us)
-    - 5xx  -> backoff + retry up to max_attempts
-    - 4xx  -> raise immediately (caller bug; not worth retrying)
+    429 -> pause the job. 4xx -> give up (probably a bug in our request).
+    5xx and network blips -> wait and try again.
     """
     for attempt in range(1, max_attempts + 1):
         try:
@@ -62,14 +59,14 @@ def call_with_retry(
             if attempt == max_attempts:
                 raise
             delay = base_delay * (2 ** (attempt - 1)) + random.uniform(0, 0.5)
-            log.warning("Alpaca transient error (status=%s), retry %d/%d in %.1fs: %s",
+            log.warning("Alpaca hiccup (status=%s), retry %d/%d in %.1fs: %s",
                         status, attempt, max_attempts, delay, e)
             time.sleep(delay)
         except Exception:
             if attempt == max_attempts:
                 raise
             delay = base_delay * (2 ** (attempt - 1)) + random.uniform(0, 0.5)
-            log.warning("Alpaca call error, retry %d/%d in %.1fs",
+            log.warning("Alpaca call failed, retry %d/%d in %.1fs",
                         attempt, max_attempts, delay, exc_info=True)
             time.sleep(delay)
-    raise RuntimeError("unreachable")  # for type-checkers
+    raise RuntimeError("unreachable")  # keep the type-checker happy

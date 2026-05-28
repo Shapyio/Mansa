@@ -1,13 +1,10 @@
 """
 SQLAlchemy engine + session factory.
 
-Connection string priority:
-  1. `DATABASE_URL` env var (used by docker-compose)
-  2. Built from POSTGRES_* env vars (used when running scripts locally with .env)
-
-If neither path produces a complete URL, we raise loudly instead of silently
-falling back to a hardcoded password — the previous default of
-"postgres:password@db" hid misconfiguration and risked committing creds.
+Picks DATABASE_URL if set (docker-compose does this), otherwise builds
+the URL from the POSTGRES_* env vars. We raise if there's no password
+rather than silently falling back to a default — that used to hide
+misconfiguration.
 """
 
 import os

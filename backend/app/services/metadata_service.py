@@ -1,18 +1,10 @@
 """
-Company metadata ingestion via FinancialModelingPrep (FMP).
+Pulls company info from FinancialModelingPrep (FMP) and saves it.
 
-Mirrors the structure of `ohlcv_service.py` so handlers stay symmetric:
-  - 429 -> TokenBudgetExceeded (worker parks the job in 'paused')
-  - 5xx -> retried with exponential backoff
-  - 4xx -> raised immediately
-
-`upsert_company_metadata(symbol)` is the public entrypoint. It:
-  1. Fetches the company profile from FMP.
-  2. Resolves sector_id / industry_id (creating rows if new).
-  3. Updates the denormalized `companies` row (name, sector, industry, etc.).
-  4. Inserts a dated snapshot into `company_metadata`.
-  5. Bumps `companies.metadata_updated_at` so the staleness checker stops
-     flagging it.
+upsert_company_metadata() does everything: fetch, look up or create
+sector/industry rows, update the `companies` row, and write a snapshot
+to `company_metadata`. A 429 turns into a paused job for the scheduler
+to retry tomorrow.
 """
 
 import datetime as dt
@@ -36,7 +28,7 @@ T = TypeVar("T")
 
 
 class FMPClientError(RuntimeError):
-    """4xx response from FMP that we don't want to retry (bad symbol, bad key)."""
+    """4xx from FMP — usually a bad symbol or bad key. Don't retry."""
 
 
 def _api_key() -> str:
@@ -47,26 +39,26 @@ def _api_key() -> str:
 
 
 def _call_with_retry(fn: Callable[[], T], *, max_attempts: int = 4, base_delay: float = 1.0) -> T:
-    """Mirror of `alpaca.call_with_retry` for FMP HTTP errors."""
+    """Retry an FMP call with backoff. 429 and 4xx skip the retry loop."""
     for attempt in range(1, max_attempts + 1):
         try:
             return fn()
         except FMPClientError:
-            raise  # 4xx, don't retry
+            raise  # bad request — no point retrying
         except TokenBudgetExceeded:
-            raise  # propagate upward; @tracked will park the job
+            raise  # let @tracked pause the job
         except (requests.RequestException, RuntimeError) as e:
             if attempt == max_attempts:
                 raise
             delay = base_delay * (2 ** (attempt - 1)) + random.uniform(0, 0.5)
-            log.warning("FMP transient error, retry %d/%d in %.1fs: %s",
+            log.warning("FMP hiccup, retry %d/%d in %.1fs: %s",
                         attempt, max_attempts, delay, e)
             time.sleep(delay)
     raise RuntimeError("unreachable")
 
 
 def fetch_company_profile(symbol: str) -> Optional[dict]:
-    """Fetch FMP `/profile` for a symbol. Returns the first match or None."""
+    """Hit FMP /profile and return the first match (or None)."""
     symbol = symbol.upper().strip()
 
     def _do() -> Optional[dict]:
@@ -84,7 +76,7 @@ def fetch_company_profile(symbol: str) -> Optional[dict]:
         data = r.json()
         if not data:
             return None
-        # FMP returns an array; take the first matching record.
+        # FMP wraps the profile in a one-element list.
         return data[0] if isinstance(data, list) else data
 
     return _call_with_retry(_do)
@@ -119,7 +111,7 @@ def _safe_float(v) -> Optional[float]:
 
 
 def upsert_company_metadata(symbol: str) -> dict:
-    """End-to-end: fetch + upsert sector/industry + update companies + snapshot."""
+    """Fetch + write the companies row + add a dated snapshot row."""
     symbol = symbol.upper().strip()
     profile = fetch_company_profile(symbol)
     if not profile:
@@ -132,7 +124,7 @@ def upsert_company_metadata(symbol: str) -> dict:
         sector_id   = _get_or_create_id(conn, "sectors",    profile.get("sector"))
         industry_id = _get_or_create_id(conn, "industries", profile.get("industry"))
 
-        # Denormalized "current" view on companies. ON CONFLICT handles re-run.
+        # Update the company's main row. ON CONFLICT makes re-runs safe.
         conn.execute(
             text("""
                 INSERT INTO companies
@@ -168,7 +160,7 @@ def upsert_company_metadata(symbol: str) -> dict:
             {"s": symbol},
         ).fetchone()[0]
 
-        # Time-series snapshot. Re-running the same day overwrites the row.
+        # Dated snapshot row. Re-running today just overwrites today's row.
         conn.execute(
             text("""
                 INSERT INTO company_metadata

@@ -123,7 +123,7 @@ export default function Tools() {
 
           <Button variant="primary" disabled={!!busy} onClick={() => run("tick", async () => {
             const t = await runTick();
-            return `Tick: resumed ${t.resumed} · enqueued ${t.metadata_enqueued} metadata · ${t.gaps_enqueued} gaps`;
+            return `Tick: resumed ${t.resumed} · ${t.metadata_enqueued} metadata · ${t.gaps_enqueued} gaps · ${t.features_enqueued} features`;
           })}>{busy === "tick" ? "…" : "Run Scheduler Tick"}</Button>
 
           <span style={{ marginLeft: "auto", display: "flex", gap: "var(--s-2)" }}>

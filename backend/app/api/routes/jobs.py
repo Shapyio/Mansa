@@ -78,7 +78,7 @@ def job_status(
     tag: list[str] = Query(default_factory=list),
     status: Optional[str] = None,
 ):
-    """Postgres counts + recent jobs (filterable) + live Redis queue lengths."""
+    """Counts + recent jobs + live Redis queue lengths."""
     return {
         "counts":       get_job_status_counts(),
         "recent":       get_recent_jobs(limit=limit, tags=tag or None, status=status),
@@ -128,12 +128,10 @@ def enqueue_metadata(body: EnqueueMetadataRequest):
 # ---------------------------------------------------------------------------
 
 def _find_stale_features() -> list[dict]:
-    """
-    Companies whose features are missing or behind the latest bar.
-    A row is "stale" when:
-      - features have never been computed, OR
-      - the most-recent bar is newer than the most-recent feature row.
-    Companies with fewer than MIN_BARS bars are skipped (no point computing).
+    """Companies that need features recomputed.
+
+    "Stale" = never computed, or newer bars exist than the last feature row.
+    Companies without enough bars (MIN_BARS) are skipped.
     """
     with engine.connect() as conn:
         rows = conn.execute(text(f"""
@@ -226,26 +224,24 @@ def resume_all():
 
 
 # ---------------------------------------------------------------------------
-# Scheduler tick — single entrypoint hit by external cron OR the UI.
+# Scheduler tick — called by GH Actions cron or the Tools page button.
 # ---------------------------------------------------------------------------
 
 class TickRequest(BaseModel):
-    metadata_budget: Optional[int] = None  # default: env FMP_DAILY_BUDGET (200)
-    gap_budget:      Optional[int] = None  # default: env ALPACA_DAILY_BUDGET (1000)
+    metadata_budget: Optional[int] = None  # env FMP_DAILY_BUDGET (default 200)
+    gap_budget:      Optional[int] = None  # env ALPACA_DAILY_BUDGET (default 1000)
+    features_budget: Optional[int] = None  # env FEATURES_DAILY_BUDGET (default 500)
     stale_days:      int           = 90
     auto_resume:     bool          = True
 
 
 @router.post("/tick")
 def tick(body: TickRequest = TickRequest()):
-    """
-    Run one scheduler pass: resume paused jobs, then enqueue up to
-    {metadata_budget} stale-metadata jobs and {gap_budget} gap-fill jobs.
-    Idempotent — safe to call any number of times per day.
-    """
+    """Run one scheduler pass. Safe to call as many times a day as you want."""
     return daily_tick(
         metadata_budget=body.metadata_budget,
         gap_budget=body.gap_budget,
+        features_budget=body.features_budget,
         stale_days=body.stale_days,
         auto_resume=body.auto_resume,
     )
