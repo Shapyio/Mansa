@@ -99,14 +99,15 @@ def fetch_and_upsert(
     )
     bars = call_with_retry(lambda: get_client().get_stock_bars(req))
 
+    company_id = _ensure_company(symbol)
+
     df = bars.df
     if df is None or df.empty:
         log.info("No bars returned for %s in window", symbol)
-        return {"symbol": symbol, "rows_upserted": 0,
+        return {"symbol": symbol, "company_id": company_id, "rows_upserted": 0,
                 "start": str(start_dt), "end": str(end_dt)}
 
     df = df.reset_index()
-    company_id = _ensure_company(symbol)
 
     rows = [
         {
@@ -128,6 +129,6 @@ def fetch_and_upsert(
 
     log.info("Upserted %d rows for %s", len(rows), symbol)
     return {
-        "symbol": symbol, "rows_upserted": len(rows),
+        "symbol": symbol, "company_id": company_id, "rows_upserted": len(rows),
         "start": str(start_dt), "end": str(end_dt),
     }

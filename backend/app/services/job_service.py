@@ -272,3 +272,30 @@ def enqueue_feature_computes(company_ids: list[int]) -> int:
     for cid in company_ids:
         enqueue_job("compute_features", {"company_id": cid}, priority=6)
     return len(company_ids)
+
+
+def enqueue_compute_features_if_not_pending(company_id: int) -> Optional[int]:
+    """
+    Chain helper called from `fill_gap`. Skips the enqueue if a
+    compute_features job for the same company is already pending or running,
+    so a flurry of gap-fills doesn't pile up dozens of redundant computes.
+
+    Returns the new pg_job_id when enqueued, or None when skipped.
+    """
+    with engine.connect() as conn:
+        existing = conn.execute(
+            text("""
+                SELECT 1 FROM jobs
+                WHERE job_type = 'compute_features'
+                  AND status IN ('pending', 'running')
+                  AND payload @> jsonb_build_object('company_id', :cid::int)
+                LIMIT 1
+            """),
+            {"cid": company_id},
+        ).fetchone()
+    if existing:
+        return None
+    return enqueue_job(
+        "compute_features", {"company_id": company_id},
+        priority=6, tags=["Auto"],
+    )["pg_job_id"]
