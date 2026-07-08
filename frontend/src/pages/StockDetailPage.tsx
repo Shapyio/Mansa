@@ -1,24 +1,32 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
+import type { IChartApi } from "lightweight-charts";
 
 import PageHeader from "../components/layout/PageHeader";
 import Badge from "../components/ui/Badge";
 import Button from "../components/ui/Button";
 import { IconRefresh } from "../components/ui/Icons";
 import PriceChart, { type ChartKind, type Overlay } from "../components/charts/PriceChart";
+import IndicatorPane, { type PaneKind } from "../components/charts/IndicatorPane";
+import { useSyncedTimeScales } from "../components/charts/useSyncedTimeScales";
 import {
   type BarRow, type FeatureRow, type StockProfile,
   getStockFeatures, getStockHistory, getStockProfile,
 } from "../api/stocks";
 
-type IndicatorKey = "sma_20" | "sma_50" | "ema_12" | "ema_26" | "bb";
+type OverlayKey = "sma_20" | "sma_50" | "ema_12" | "ema_26" | "bb";
 
-const INDICATOR_DEFS: { key: IndicatorKey; label: string; color: string }[] = [
+const OVERLAY_DEFS: { key: OverlayKey; label: string; color: string }[] = [
   { key: "sma_20", label: "SMA 20", color: "#38bdf8" }, // sky
   { key: "sma_50", label: "SMA 50", color: "#a855f7" }, // violet
   { key: "ema_12", label: "EMA 12", color: "#f59e0b" }, // amber
   { key: "ema_26", label: "EMA 26", color: "#fb7185" }, // rose
   { key: "bb",     label: "Bollinger 20/2σ", color: "#94a3b8" },
+];
+
+const PANE_DEFS: { key: PaneKind; label: string; color: string }[] = [
+  { key: "rsi",  label: "RSI 14", color: "#38bdf8" },
+  { key: "macd", label: "MACD",   color: "#f59e0b" },
 ];
 
 type RangeKey = "1D" | "1W" | "1M" | "3M" | "6M" | "YTD" | "1Y" | "5Y" | "ALL" | "CUSTOM";
@@ -58,6 +66,14 @@ const fmtInt = (n: number | null | undefined) =>
 const fmtDate = (iso: string | null | undefined) =>
   iso ? new Date(iso).toLocaleString() : "—";
 
+const paneLabelStyle: React.CSSProperties = {
+  padding: "4px 10px",
+  fontSize: "var(--fs-xs)",
+  color: "var(--text-muted)",
+  textTransform: "uppercase",
+  letterSpacing: "0.06em",
+};
+
 export default function StockDetail() {
   const { symbol = "" } = useParams();
   const sym = symbol.toUpperCase();
@@ -73,7 +89,19 @@ export default function StockDetail() {
   });
   const [loading,  setLoading]   = useState(true);
   const [err,      setErr]       = useState<string | null>(null);
-  const [active,   setActive]    = useState<Set<IndicatorKey>>(new Set());
+  const [active,   setActive]    = useState<Set<OverlayKey>>(new Set());
+  const [panes,    setPanes]     = useState<Set<PaneKind>>(new Set());
+
+  // Chart handles for time-axis sync. Price is the master; panes follow.
+  const [priceChart, setPriceChart] = useState<IChartApi | null>(null);
+  const [rsiChart,   setRsiChart]   = useState<IChartApi | null>(null);
+  const [macdChart,  setMacdChart]  = useState<IChartApi | null>(null);
+
+  const onPriceReady = useCallback((c: IChartApi) => setPriceChart(c), []);
+  const onRsiReady   = useCallback((c: IChartApi) => setRsiChart(c),   []);
+  const onMacdReady  = useCallback((c: IChartApi) => setMacdChart(c),  []);
+
+  useSyncedTimeScales(priceChart, useMemo(() => [rsiChart, macdChart], [rsiChart, macdChart]));
 
   // Profile load
   useEffect(() => {
@@ -149,7 +177,13 @@ export default function StockDetail() {
     return out;
   }, [active, feats]);
 
-  const toggle = (k: IndicatorKey) => setActive((cur) => {
+  const toggleOverlay = (k: OverlayKey) => setActive((cur) => {
+    const next = new Set(cur);
+    next.has(k) ? next.delete(k) : next.add(k);
+    return next;
+  });
+
+  const togglePane = (k: PaneKind) => setPanes((cur) => {
     const next = new Set(cur);
     next.has(k) ? next.delete(k) : next.add(k);
     return next;
@@ -249,20 +283,46 @@ export default function StockDetail() {
             </label>
           </div>
 
-          {/* Indicator toggles */}
+          {/* Indicator toggles — overlays paint on the price chart, panes render below it */}
           <div className="card card--padded" style={{
             display: "flex", flexWrap: "wrap", gap: "var(--s-2)", alignItems: "center",
             marginBottom: "var(--s-3)",
           }}>
             <span style={{ fontSize: "var(--fs-xs)", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginRight: "var(--s-2)" }}>
-              Indicators
+              Overlays
             </span>
-            {INDICATOR_DEFS.map((d) => {
+            {OVERLAY_DEFS.map((d) => {
               const on = active.has(d.key);
               return (
                 <button
                   key={d.key}
-                  onClick={() => toggle(d.key)}
+                  onClick={() => toggleOverlay(d.key)}
+                  className={`btn btn--sm${on ? "" : " btn--ghost"}`}
+                  style={on ? {
+                    background: d.color, borderColor: d.color, color: "#04130d",
+                  } : undefined}
+                >
+                  <span style={{
+                    display: "inline-block", width: 10, height: 2,
+                    background: d.color, marginRight: 6, verticalAlign: "middle",
+                  }} />
+                  {d.label}
+                </button>
+              );
+            })}
+            <span style={{
+              width: 1, height: 20, background: "var(--line)",
+              marginInline: "var(--s-2)",
+            }} />
+            <span style={{ fontSize: "var(--fs-xs)", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginRight: "var(--s-2)" }}>
+              Panes
+            </span>
+            {PANE_DEFS.map((d) => {
+              const on = panes.has(d.key);
+              return (
+                <button
+                  key={d.key}
+                  onClick={() => togglePane(d.key)}
                   className={`btn btn--sm${on ? "" : " btn--ghost"}`}
                   style={on ? {
                     background: d.color, borderColor: d.color, color: "#04130d",
@@ -283,14 +343,35 @@ export default function StockDetail() {
             )}
           </div>
 
-          {/* Chart */}
+          {/* Chart + optional indicator panes stacked below */}
           <div className="card" style={{ padding: 4, marginBottom: "var(--s-4)" }}>
             {bars.length === 0 ? (
               <div style={{ padding: "var(--s-8)", color: "var(--text-faint)", textAlign: "center" }}>
                 No data in selected range.
               </div>
             ) : (
-              <PriceChart bars={bars} kind={kind} showVolume={showVol} overlays={overlays} height={460} />
+              <>
+                <PriceChart
+                  bars={bars}
+                  kind={kind}
+                  showVolume={showVol}
+                  overlays={overlays}
+                  height={460}
+                  onReady={onPriceReady}
+                />
+                {panes.has("rsi") && (
+                  <div style={{ borderTop: "1px solid var(--line)" }}>
+                    <div style={paneLabelStyle}>RSI 14</div>
+                    <IndicatorPane kind="rsi" feats={feats} onReady={onRsiReady} />
+                  </div>
+                )}
+                {panes.has("macd") && (
+                  <div style={{ borderTop: "1px solid var(--line)" }}>
+                    <div style={paneLabelStyle}>MACD 12/26/9</div>
+                    <IndicatorPane kind="macd" feats={feats} onReady={onMacdReady} />
+                  </div>
+                )}
+              </>
             )}
             <div style={{
               padding: "8px 12px", fontSize: "var(--fs-xs)", color: "var(--text-muted)",

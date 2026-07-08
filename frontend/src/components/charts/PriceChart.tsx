@@ -23,6 +23,7 @@ type Props = {
   showVolume?: boolean;
   height?: number;
   overlays?: Overlay[];
+  onReady?: (chart: IChartApi) => void;
 };
 
 const toTime = (iso: string): Time => iso.slice(0, 10) as Time;
@@ -53,7 +54,7 @@ const safeNum = (v: unknown): number | null => {
 };
 
 export default function PriceChart({
-  bars, kind, showVolume = true, height = 420, overlays = [],
+  bars, kind, showVolume = true, height = 420, overlays = [], onReady,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chartRef     = useRef<IChartApi | null>(null);
@@ -89,6 +90,7 @@ export default function PriceChart({
       },
     });
     chartRef.current = chart;
+    onReady?.(chart);
 
     return () => {
       chart.remove();
@@ -96,6 +98,8 @@ export default function PriceChart({
       priceRef.current = null;
       volRef.current   = null;
     };
+    // onReady intentionally omitted — parent must keep the callback stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // (Re)build the price series when chart kind changes

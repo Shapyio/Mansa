@@ -20,8 +20,7 @@ QUEUE_NAMES = ["high", "default", "low"]
 
 
 def main() -> None:
-    # RQ 1.13+ dropped the Connection context manager — pass the connection
-    # straight to Queue/Worker.
+    # RQ 1.13+ dropped the Connection context manager — pass the connection straight to Queue/Worker.
     queues = [Queue(name, connection=redis_conn) for name in QUEUE_NAMES]
     worker = Worker(queues, connection=redis_conn)
     print(f"RQ worker listening on: {QUEUE_NAMES}", flush=True)
